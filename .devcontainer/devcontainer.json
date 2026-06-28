@@ -1,0 +1,21 @@
+{
+  "name": "MyNote Dev",
+  "build": { "dockerfile": "Dockerfile" },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "typescript.tsdk": "application/node_modules/typescript/lib"
+      }
+    }
+  },
+  "postCreateCommand": "cd application && npm install",
+  "remoteUser": "node"
+}
