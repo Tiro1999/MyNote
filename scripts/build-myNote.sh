@@ -2,7 +2,11 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # scripts/build-myNote.sh
 #
-# Security audits followed by the application build.
+# Installs dependencies, runs security audits, then builds the application.
+#
+# Dependency install
+#   • package-lock.json exists → npm ci  (reproducible, CI-safe)
+#   • package-lock.json absent → npm install (creates the lockfile; commit it!)
 #
 # Audit rules
 #   • npm audit (all deps, incl. dev)  → always runs; output is informational,
@@ -26,16 +30,27 @@ echo "  MyNote Build"
 echo "  Node ${NODE_VER}  |  npm ${NPM_VER}  |  V8 ${V8_VER}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── 1. Audit — all dependencies (dev + prod) — informational ─────────────────
+# ── 1. Install / restore dependencies ────────────────────────────────────────
 echo ""
-echo "▶  1/3  npm audit  (all deps — informational, non-blocking)"
+echo "▶  1/4  Dependencies"
+if [ -f package-lock.json ]; then
+  npm ci
+else
+  echo "  ⚠️  No package-lock.json found — running 'npm install' to create one."
+  echo "      Commit application/package-lock.json before the next release."
+  npm install
+fi
+
+# ── 2. Audit — all dependencies (dev + prod) — informational ─────────────────
+echo ""
+echo "▶  2/4  npm audit  (all deps — informational, non-blocking)"
 npm audit --json > audit-all.json 2>&1 || true
 npm audit              || true
 echo "        Full JSON report → application/audit-all.json"
 
-# ── 2. Audit — production / release dependencies — BUILD-CRITICAL ────────────
+# ── 3. Audit — production / release dependencies — BUILD-CRITICAL ────────────
 echo ""
-echo "▶  2/3  npm audit --omit=dev  (production deps — build-critical)"
+echo "▶  3/4  npm audit --omit=dev  (production deps — build-critical)"
 if ! npm audit --omit=dev; then
   echo ""
   echo "  ╔══════════════════════════════════════════════════════════╗"
@@ -48,9 +63,9 @@ if ! npm audit --omit=dev; then
 fi
 echo "        ✅  Production dependency audit passed."
 
-# ── 3. Build ──────────────────────────────────────────────────────────────────
+# ── 4. Build ──────────────────────────────────────────────────────────────────
 echo ""
-echo "▶  3/3  electron-vite build"
+echo "▶  4/4  electron-vite build"
 npm run build
 
 # Record the exact runtime versions used for this build (fed into SBOM)
