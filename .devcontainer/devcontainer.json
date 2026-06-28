@@ -4,15 +4,16 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
         "dbaeumer.vscode-eslint",
         "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode",
-        "GitHub.copilot",
-        "GitHub.copilot-chat"
+        "esbenp.prettier-vscode"
       ],
       "settings": {
         "editor.formatOnSave": true,
-        "typescript.tsdk": "application/node_modules/typescript/lib"
+        "typescript.tsdk": "application/node_modules/typescript/lib",
+        "github.copilot.enable": { "*": true }
       }
     }
   },

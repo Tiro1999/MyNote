@@ -20,7 +20,7 @@ cd application
 npm sbom --format cyclonedx-json --package-lock-only > sbom-local.cdx.json
 ```
 
-Requires npm ≥ 10 (ships with Node 20+).
+Requires npm ≥ 11 (ships with Node 26+). See [`runtime-versions.md`](./runtime-versions.md) for pinned version details.
 
 ## Release artifact naming
 
@@ -45,6 +45,12 @@ Run before each release:
 npm audit                       # check for known vulnerabilities
 npx license-checker --summary   # review license compliance across all deps
 ```
+
+## Runtime environment
+
+The Node.js runtime, npm, and V8 versions used for every build are recorded in
+`application/runtime-versions.txt` and uploaded as a CI/release artifact.
+See [`runtime-versions.md`](./runtime-versions.md) for the pinning policy and update instructions.
 
 ## Versioning policy
 
