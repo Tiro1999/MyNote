@@ -20,6 +20,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Pin npm to the declared version (keeps dev and CI in sync)
 RUN npm install -g npm@${NPM_VERSION}
 
+# GitHub Copilot CLI — download binary from GitHub releases
+# The npm package @github/copilot-cli does not exist; the binary ships via GitHub Releases.
+RUN curl -fsSL https://github.com/github/copilot-cli/releases/latest/download/copilot-linux-x64.tar.gz \
+    | tar -xz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/copilot
+
 # Native libraries needed by Electron for compilation and packaging
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libx11-dev \
