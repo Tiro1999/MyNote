@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "MyNote: Build",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run build",
+      "cwd": "${workspaceFolder}/application"
+    },
+    {
+      "name": "MyNote: Run Dev",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/application",
+      "env": {
+        "NO_SANDBOX": "1",
+        "GSETTINGS_BACKEND": "memory"
+      }
+    },
+    {
+      "name": "MyNote: Build + Run Dev",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/application",
+      "preLaunchTask": "MyNote: Build",
+      "env": {
+        "NO_SANDBOX": "1",
+        "GSETTINGS_BACKEND": "memory"
+      }
+    }
+  ]
+}

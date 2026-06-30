@@ -24,7 +24,11 @@
       "type": "shell",
       "command": "npm run dev",
       "options": {
-        "cwd": "${workspaceFolder}/application"
+        "cwd": "${workspaceFolder}/application",
+        "env": {
+          "NO_SANDBOX": "1",
+          "GSETTINGS_BACKEND": "memory"
+        }
       },
       "isBackground": true,
       "problemMatcher": []
