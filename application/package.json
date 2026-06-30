@@ -8,7 +8,9 @@
     "npm": ">=11.0.0"
   },
   "scripts": {
-    "dev": "electron-vite dev",
+    "ensure:electron": "node -e \"require('electron')\"",
+    "postinstall": "npm run ensure:electron",
+    "dev": "npm run ensure:electron && electron-vite dev",
     "build": "electron-vite build",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",

@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "MyNote: Install",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}/application"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MyNote: Build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}/application"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MyNote: Run Dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/application"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "MyNote: Build + Run Dev",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MyNote: Build",
+        "MyNote: Run Dev"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MyNote: Typecheck",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "options": {
+        "cwd": "${workspaceFolder}/application"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MyNote: Lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "options": {
+        "cwd": "${workspaceFolder}/application"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
