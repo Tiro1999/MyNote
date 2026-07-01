@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNotebookStore } from '../../store/notebookStore'
 import type { Notebook, Section } from '../../types'
 import TextInputDialog from '../Common/TextInputDialog'
+import ThemeToggle from '../Common/ThemeToggle'
 
 export default function Sidebar(): JSX.Element {
   const {
@@ -21,26 +22,29 @@ export default function Sidebar(): JSX.Element {
 
   return (
     <>
-      <aside className="flex flex-col h-full w-60 border-r border-gray-200 bg-gray-50 shrink-0">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+      <aside className="flex h-full w-60 shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-800">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
             Notebooks
           </span>
-          <button
-            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-            onClick={() => setNotebookDialogOpen(true)}
-          >
-            + New
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              className="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              onClick={() => setNotebookDialogOpen(true)}
+            >
+              + New
+            </button>
+          </div>
         </div>
         <nav className="flex-1 overflow-y-auto">
           {notebooks.map((nb) => (
             <div key={nb.id}>
               <button
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 ${
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 ${
                   activeNotebookId === nb.id
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-gray-700'
+                    ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                    : 'text-gray-700 dark:text-gray-200'
                 }`}
                 onClick={() => setActiveNotebook(nb.id)}
               >
@@ -110,12 +114,14 @@ function SectionList({
   onAddPage: (sectionId: string) => void
 }): JSX.Element {
   return (
-    <div className="ml-3 border-l border-gray-200">
+    <div className="ml-3 border-l border-gray-200 dark:border-gray-800">
       {notebook.sections.map((section) => (
         <div key={section.id}>
           <button
-            className={`w-full text-left pl-3 pr-2 py-1.5 text-sm flex items-center gap-2 hover:bg-gray-100 ${
-              activeSectionId === section.id ? 'text-pink-700 font-semibold' : 'text-gray-600'
+            className={`flex w-full items-center gap-2 py-1.5 pl-3 pr-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 ${
+              activeSectionId === section.id
+                ? 'font-semibold text-pink-700 dark:text-pink-300'
+                : 'text-gray-600 dark:text-gray-300'
             }`}
             onClick={() => onSectionClick(section.id)}
           >
@@ -136,7 +142,7 @@ function SectionList({
         </div>
       ))}
       <button
-        className="w-full text-left pl-4 py-1 text-xs text-gray-400 hover:text-blue-600"
+        className="w-full py-1 pl-4 text-left text-xs text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400"
         onClick={onAddSection}
       >
         + Section
@@ -157,12 +163,14 @@ function PageList({
   onAddPage: () => void
 }): JSX.Element {
   return (
-    <div className="ml-3 border-l border-gray-200">
+    <div className="ml-3 border-l border-gray-200 dark:border-gray-800">
       {section.pages.map((page) => (
         <button
           key={page.id}
-          className={`w-full text-left pl-3 pr-2 py-1 text-xs hover:bg-gray-100 truncate block ${
-            activePageId === page.id ? 'text-blue-700 font-semibold bg-blue-50' : 'text-gray-500'
+          className={`block w-full truncate py-1 pl-3 pr-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-800 ${
+            activePageId === page.id
+              ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+              : 'text-gray-500 dark:text-gray-400'
           }`}
           onClick={() => onPageClick(page.id)}
         >
@@ -170,7 +178,7 @@ function PageList({
         </button>
       ))}
       <button
-        className="w-full text-left pl-3 py-1 text-xs text-gray-400 hover:text-blue-600"
+        className="w-full py-1 pl-3 text-left text-xs text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400"
         onClick={onAddPage}
       >
         + Page

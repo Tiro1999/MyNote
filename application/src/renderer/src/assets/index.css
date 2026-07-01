@@ -6,6 +6,23 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #111827;
+}
+
+.dark body {
+  background: #030712;
+  color: #f3f4f6;
+}
+
 /* ── TipTap / ProseMirror base styles ─────────────────────────────────────── */
 .tiptap-editor .ProseMirror {
   outline: none;
@@ -57,10 +74,18 @@
   cursor: pointer;
 }
 
+.dark .tiptap-editor .ProseMirror a {
+  color: #60a5fa;
+}
+
 .tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
   color: #adb5bd;
   pointer-events: none;
   height: 0;
+}
+
+.dark .tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: #6b7280;
 }

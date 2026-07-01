@@ -97,10 +97,10 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       onMouseDown={handleBoxMouseDown}
     >
       <div
-        className={`w-full h-full flex flex-col rounded border bg-white overflow-hidden transition-shadow ${
+        className={`flex h-full w-full flex-col overflow-hidden rounded border bg-white text-gray-900 transition-shadow dark:bg-gray-900 dark:text-gray-100 ${
           focused
-            ? 'border-blue-400 shadow-lg ring-1 ring-blue-300'
-            : 'border-transparent hover:border-gray-300 hover:shadow-sm'
+            ? 'border-blue-400 shadow-lg ring-1 ring-blue-300 dark:border-blue-500 dark:ring-blue-500/60'
+            : 'border-transparent hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-700'
         }`}
         onClick={() => {
           if (!didMove.current) setFocused(true)
@@ -113,7 +113,7 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
         {focused && editor && <Toolbar editor={editor} />}
         <EditorContent
           editor={editor}
-          className="flex-1 overflow-auto p-2 cursor-text tiptap-editor"
+          className="tiptap-editor flex-1 cursor-text overflow-auto p-2 text-gray-900 dark:text-gray-100"
           onMouseDown={(e) => {
             if (focused) e.stopPropagation()
           }}

@@ -5,6 +5,17 @@ import type { Notebook, Section, PageMeta, PageContent, AnyCanvasElement } from 
 // Helpers to keep path construction in one place.
 // Node.js fs accepts forward slashes on all platforms, so we always use '/'.
 const fsApi = () => window.api.fs
+const THEME_STORAGE_KEY = 'mynote-theme'
+
+function readInitialDarkMode(): boolean {
+  if (typeof window === 'undefined') return true
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+  return savedTheme === null ? true : savedTheme === 'dark'
+}
+
+function persistTheme(isDarkMode: boolean): void {
+  window.localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light')
+}
 
 function manifestPath(root: string): string {
   return `${root}/notebooks.json`
@@ -32,12 +43,14 @@ interface NotebookStore {
   activeSectionId: string | null
   activePageId: string | null
   pageContent: PageContent | null
+  isDarkMode: boolean
 
   setDataRoot: (path: string) => Promise<void>
 
   setActiveNotebook: (id: string) => void
   setActiveSection: (id: string) => void
   setActivePage: (id: string) => Promise<void>
+  toggleDarkMode: () => void
 
   addNotebook: (name: string, color?: string) => Promise<void>
   addSection: (notebookId: string, name: string) => Promise<void>
@@ -59,6 +72,7 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
   activeSectionId: null,
   activePageId: null,
   pageContent: null,
+  isDarkMode: readInitialDarkMode(),
 
   setDataRoot: async (path) => {
     const exists = await fsApi().exists(manifestPath(path))
@@ -92,6 +106,13 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
       set({ pageContent: fresh })
     }
   },
+
+  toggleDarkMode: () =>
+    set((state) => {
+      const nextValue = !state.isDarkMode
+      persistTheme(nextValue)
+      return { isDarkMode: nextValue }
+    }),
 
   addNotebook: async (name, color = '#0078D4') => {
     const { dataRoot, notebooks } = get()

@@ -78,7 +78,7 @@ export default function CanvasView(): JSX.Element {
   return (
     <div
       ref={viewportRef}
-      className="relative w-full h-full overflow-hidden bg-[#f0f0f0]"
+      className="relative h-full w-full overflow-hidden bg-[#f0f0f0] dark:bg-[#111827]"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -111,22 +111,22 @@ export default function CanvasView(): JSX.Element {
       </div>
 
       {/* Zoom / pan HUD */}
-      <div className="absolute bottom-3 right-4 flex items-center gap-1 text-xs text-gray-500 select-none">
+      <div className="absolute bottom-3 right-4 flex items-center gap-1 text-xs text-gray-500 select-none dark:text-gray-300">
         <button
-          className="px-2 py-0.5 bg-white border border-gray-200 rounded hover:bg-gray-50"
+          className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
           onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}
         >
           −
         </button>
         <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
         <button
-          className="px-2 py-0.5 bg-white border border-gray-200 rounded hover:bg-gray-50"
+          className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
           onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}
         >
           +
         </button>
         <button
-          className="ml-1 px-2 py-0.5 bg-white border border-gray-200 rounded hover:bg-gray-50"
+          className="ml-1 rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
           onClick={() => {
             setZoom(1)
             setPan({ x: 40, y: 40 })
@@ -139,7 +139,7 @@ export default function CanvasView(): JSX.Element {
       {/* Empty-page hint */}
       {(!pageContent || pageContent.elements.length === 0) && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-gray-400 text-sm select-none">
+          <p className="text-sm text-gray-400 select-none dark:text-gray-500">
             Double-click anywhere to add a text box
           </p>
         </div>
