@@ -9,3 +9,4 @@ Thumbs.db
 # Generated build artifacts (recreated by build-myNote.sh on every run)
 audit-all.json
 runtime-versions.txt
+note-testspace

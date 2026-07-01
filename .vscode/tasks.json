@@ -22,13 +22,9 @@
     {
       "label": "MyNote: Run Dev",
       "type": "shell",
-      "command": "npm run dev",
+      "command": "npm run dev:container",
       "options": {
-        "cwd": "${workspaceFolder}/application",
-        "env": {
-          "NO_SANDBOX": "1",
-          "GSETTINGS_BACKEND": "memory"
-        }
+        "cwd": "${workspaceFolder}/application"
       },
       "isBackground": true,
       "problemMatcher": []

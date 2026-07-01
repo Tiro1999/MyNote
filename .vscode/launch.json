@@ -12,24 +12,16 @@
       "name": "MyNote: Run Dev",
       "type": "node-terminal",
       "request": "launch",
-      "command": "npm run dev",
-      "cwd": "${workspaceFolder}/application",
-      "env": {
-        "NO_SANDBOX": "1",
-        "GSETTINGS_BACKEND": "memory"
-      }
+      "command": "npm run dev:container",
+      "cwd": "${workspaceFolder}/application"
     },
     {
       "name": "MyNote: Build + Run Dev",
       "type": "node-terminal",
       "request": "launch",
-      "command": "npm run dev",
+      "command": "npm run dev:container",
       "cwd": "${workspaceFolder}/application",
-      "preLaunchTask": "MyNote: Build",
-      "env": {
-        "NO_SANDBOX": "1",
-        "GSETTINGS_BACKEND": "memory"
-      }
+      "preLaunchTask": "MyNote: Build"
     }
   ]
 }

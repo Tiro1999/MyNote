@@ -101,7 +101,13 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     const updated = [...notebooks, notebook]
     await fsApi().mkdir(`${dataRoot}/${id}`)
     await persistNotebooks(dataRoot, updated)
-    set({ notebooks: updated })
+    set({
+      notebooks: updated,
+      activeNotebookId: id,
+      activeSectionId: null,
+      activePageId: null,
+      pageContent: null
+    })
   },
 
   addSection: async (notebookId, name) => {
@@ -114,7 +120,13 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     )
     await fsApi().mkdir(`${dataRoot}/${notebookId}/${sectionId}`)
     await persistNotebooks(dataRoot, updated)
-    set({ notebooks: updated })
+    set({
+      notebooks: updated,
+      activeNotebookId: notebookId,
+      activeSectionId: sectionId,
+      activePageId: null,
+      pageContent: null
+    })
   },
 
   addPage: async (sectionId, title = 'Untitled Page') => {
@@ -142,7 +154,13 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
       JSON.stringify({ pageId, elements: [] }, null, 2)
     )
     await persistNotebooks(dataRoot, updated)
-    set({ notebooks: updated })
+    set({
+      notebooks: updated,
+      activeNotebookId: notebook.id,
+      activeSectionId: sectionId,
+      activePageId: pageId,
+      pageContent: { pageId, elements: [] }
+    })
   },
 
   addElement: (element) => {

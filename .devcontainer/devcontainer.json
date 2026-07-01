@@ -18,5 +18,6 @@
     }
   },
   "postCreateCommand": "cd application && npm install",
+  "postStartCommand": "sudo mkdir -p /run/dbus && (test -S /run/dbus/system_bus_socket || sudo dbus-daemon --system --fork --nopidfile)",
   "remoteUser": "node"
 }

@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libx11-dev \
     libxkbfile-dev \
     libsecret-1-dev \
+    libgl1 \
     libcups2 \
     libgtk-3-0 \
     libnss3 \

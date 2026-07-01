@@ -11,6 +11,7 @@
     "ensure:electron": "node -e \"require('electron')\"",
     "postinstall": "npm run ensure:electron",
     "dev": "npm run ensure:electron && electron-vite dev",
+    "dev:container": "npm run ensure:electron && ./scripts/dev-container.sh",
     "build": "electron-vite build",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
