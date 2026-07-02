@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 export interface ContextMenuItem {
   label: string
   onClick: () => void
+  danger?: boolean
 }
 
 interface Props {
@@ -39,7 +40,11 @@ export default function ContextMenu({ x, y, items, onClose }: Props): JSX.Elemen
       {items.map((item) => (
         <button
           key={item.label}
-          className="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+          className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 ${
+            item.danger
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-gray-700 dark:text-gray-200'
+          }`}
           onClick={() => {
             item.onClick()
             onClose()

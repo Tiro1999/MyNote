@@ -3,9 +3,11 @@ import { useNotebookStore } from '../../store/notebookStore'
 import type { Notebook, Section, PageMeta } from '../../types'
 import TextInputDialog from '../Common/TextInputDialog'
 import ContextMenu, { ContextMenuItem } from '../Common/ContextMenu'
+import ConfirmDialog from '../Common/ConfirmDialog'
 import ThemeToggle from '../Common/ThemeToggle'
 
 type RenameTarget = { kind: 'notebook' | 'section' | 'page'; id: string; initialValue: string }
+type DeleteTarget = { kind: 'section' | 'page'; id: string; name: string }
 type MenuState = { x: number; y: number; items: ContextMenuItem[] }
 
 export default function Sidebar(): JSX.Element {
@@ -25,11 +27,14 @@ export default function Sidebar(): JSX.Element {
     renameSection,
     renamePage,
     toggleSectionCollapsed,
-    togglePageCollapsed
+    togglePageCollapsed,
+    deleteSection,
+    deletePage
   } = useNotebookStore()
   const [notebookDialogOpen, setNotebookDialogOpen] = useState(false)
   const [sectionNotebookId, setSectionNotebookId] = useState<string | null>(null)
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
 
   const openMenu = (e: React.MouseEvent, items: ContextMenuItem[]): void => {
@@ -43,6 +48,13 @@ export default function Sidebar(): JSX.Element {
     else if (renameTarget.kind === 'section') await renameSection(renameTarget.id, value)
     else await renamePage(renameTarget.id, value)
     setRenameTarget(null)
+  }
+
+  const handleDeleteConfirm = async (): Promise<void> => {
+    if (!deleteTarget) return
+    if (deleteTarget.kind === 'section') await deleteSection(deleteTarget.id)
+    else await deletePage(deleteTarget.id)
+    setDeleteTarget(null)
   }
 
   return (
@@ -106,7 +118,12 @@ export default function Sidebar(): JSX.Element {
                         onClick: () =>
                           setRenameTarget({ kind: 'section', id: section.id, initialValue: section.name })
                       },
-                      { label: 'New page', onClick: () => addPage(section.id) }
+                      { label: 'New page', onClick: () => addPage(section.id) },
+                      {
+                        label: 'Delete',
+                        danger: true,
+                        onClick: () => setDeleteTarget({ kind: 'section', id: section.id, name: section.name })
+                      }
                     ])
                   }
                   onPageContextMenu={(e, page) =>
@@ -116,7 +133,12 @@ export default function Sidebar(): JSX.Element {
                         onClick: () =>
                           setRenameTarget({ kind: 'page', id: page.id, initialValue: page.title })
                       },
-                      { label: 'New subpage', onClick: () => addSubpage(page.id) }
+                      { label: 'New subpage', onClick: () => addSubpage(page.id) },
+                      {
+                        label: 'Delete',
+                        danger: true,
+                        onClick: () => setDeleteTarget({ kind: 'page', id: page.id, name: page.title })
+                      }
                     ])
                   }
                 />
@@ -163,6 +185,18 @@ export default function Sidebar(): JSX.Element {
         initialValue={renameTarget?.initialValue ?? ''}
         onCancel={() => setRenameTarget(null)}
         onConfirm={handleRenameConfirm}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={deleteTarget?.kind === 'section' ? 'Delete chapter' : 'Delete page'}
+        message={
+          deleteTarget?.kind === 'section'
+            ? `Delete chapter "${deleteTarget.name}" and all of its pages? This cannot be undone.`
+            : `Delete page "${deleteTarget?.name}" and all of its subpages? This cannot be undone.`
+        }
+        confirmLabel="Delete"
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirm}
       />
     </>
   )

@@ -11,6 +11,7 @@ declare global {
         mkdir(dirPath: string): Promise<void>
         exists(path: string): Promise<boolean>
         copyFile(src: string, dest: string): Promise<void>
+        remove(targetPath: string): Promise<void>
       }
       dialog: {
         openDirectory(): Promise<string | null>

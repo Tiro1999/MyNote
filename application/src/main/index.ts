@@ -90,6 +90,10 @@ ipcMain.handle('fs:copyFile', async (_, src: string, dest: string) => {
   await fs.promises.copyFile(src, dest)
 })
 
+ipcMain.handle('fs:remove', async (_, targetPath: string) => {
+  await fs.promises.rm(targetPath, { recursive: true, force: true })
+})
+
 // ─── Dialog IPC ───────────────────────────────────────────────────────────────
 
 ipcMain.handle('dialog:openDirectory', async () => {

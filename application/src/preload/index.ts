@@ -14,7 +14,9 @@ const api = {
     exists: (path: string): Promise<boolean> =>
       ipcRenderer.invoke('fs:exists', path),
     copyFile: (src: string, dest: string): Promise<void> =>
-      ipcRenderer.invoke('fs:copyFile', src, dest)
+      ipcRenderer.invoke('fs:copyFile', src, dest),
+    remove: (targetPath: string): Promise<void> =>
+      ipcRenderer.invoke('fs:remove', targetPath)
   },
   dialog: {
     openDirectory: (): Promise<string | null> =>

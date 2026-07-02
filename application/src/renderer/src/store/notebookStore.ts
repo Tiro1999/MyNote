@@ -107,6 +107,20 @@ function mapPageTree(
   })
 }
 
+/** Immutably removes the page matching `pageId`, anywhere in the (sub)page tree. */
+function removePageFromTree(pages: PageMeta[], pageId: string): PageMeta[] {
+  return pages
+    .filter((page) => page.id !== pageId)
+    .map((page) =>
+      page.children.length > 0 ? { ...page, children: removePageFromTree(page.children, pageId) } : page
+    )
+}
+
+/** Ids of a page and all of its nested subpages. */
+function collectPageIds(page: PageMeta): string[] {
+  return [page.id, ...page.children.flatMap(collectPageIds)]
+}
+
 // ─── Store interface ──────────────────────────────────────────────────────────
 
 interface NotebookStore {
@@ -139,6 +153,9 @@ interface NotebookStore {
 
   toggleSectionCollapsed: (id: string) => Promise<void>
   togglePageCollapsed: (pageId: string) => Promise<void>
+
+  deleteSection: (id: string) => Promise<void>
+  deletePage: (pageId: string) => Promise<void>
 
   addElement: (element: AnyCanvasElement) => void
   updateElement: (id: string, updates: Partial<AnyCanvasElement>) => void
@@ -442,6 +459,54 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     }))
     set({ notebooks: updated })
     if (dataRoot) await persistNotebooks(dataRoot, updated)
+  },
+
+  deleteSection: async (id) => {
+    const { dataRoot, notebooks, activeSectionId } = get()
+    if (!dataRoot) return
+    const notebook = notebooks.find((nb) => nb.sections.some((s) => s.id === id))
+    if (!notebook) return
+    const updated = notebooks.map((nb) =>
+      nb.id === notebook.id ? { ...nb, sections: nb.sections.filter((sec) => sec.id !== id) } : nb
+    )
+    await fsApi().remove(`${dataRoot}/${notebook.id}/${id}`)
+    await persistNotebooks(dataRoot, updated)
+    const wasActive = activeSectionId === id
+    set({
+      notebooks: updated,
+      ...(wasActive
+        ? { activeSectionId: null, activeContentKind: null, activeContentId: null, pageContent: null }
+        : {})
+    })
+  },
+
+  deletePage: async (pageId) => {
+    const { dataRoot, notebooks, activeContentKind, activeContentId } = get()
+    if (!dataRoot) return
+    const location = findPageLocation(notebooks, pageId)
+    if (!location) return
+    const deletedIds = new Set(collectPageIds(location.chain[location.chain.length - 1]))
+    const updated = notebooks.map((nb) =>
+      nb.id === location.notebook.id
+        ? {
+            ...nb,
+            sections: nb.sections.map((sec) =>
+              sec.id === location.section.id
+                ? { ...sec, pages: removePageFromTree(sec.pages, pageId) }
+                : sec
+            )
+          }
+        : nb
+    )
+    const idPath = location.chain.map((p) => p.id).join('/')
+    await fsApi().remove(`${dataRoot}/${location.notebook.id}/${location.section.id}/${idPath}`)
+    await persistNotebooks(dataRoot, updated)
+    const shouldReset =
+      activeContentKind === 'page' && activeContentId !== null && deletedIds.has(activeContentId)
+    set({
+      notebooks: updated,
+      ...(shouldReset ? { activeContentKind: null, activeContentId: null, pageContent: null } : {})
+    })
   },
 
   addElement: (element) => {
