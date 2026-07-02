@@ -5,7 +5,7 @@ import CanvasView from './components/Canvas/CanvasView'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
 
 export default function App(): JSX.Element {
-  const { dataRoot, activePageId, isDarkMode } = useNotebookStore()
+  const { dataRoot, activeContentId, isDarkMode } = useNotebookStore()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
@@ -19,7 +19,7 @@ export default function App(): JSX.Element {
     <div className="flex h-screen w-screen overflow-hidden bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <Sidebar />
       <main className="flex-1 overflow-hidden">
-        {activePageId ? (
+        {activeContentId ? (
           <CanvasView />
         ) : (
           <div className="flex h-full items-center justify-center text-lg text-gray-400 select-none dark:text-gray-500">

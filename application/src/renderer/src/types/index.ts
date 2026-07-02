@@ -10,6 +10,8 @@ export interface Section {
   notebookId: string
   name: string
   color: string
+  /** Collapsed state of this chapter's page tree in the sidebar. */
+  collapsed?: boolean
   pages: PageMeta[]
 }
 
@@ -17,8 +19,12 @@ export interface PageMeta {
   id: string
   sectionId: string
   title: string
+  /** Collapsed state of this page's subpage tree in the sidebar. */
+  collapsed?: boolean
   createdAt: string
   updatedAt: string
+  /** Nested subpages, recursively collapsible in the sidebar. */
+  children: PageMeta[]
 }
 
 export type CanvasElementType = 'textbox' | 'image' | 'file'
