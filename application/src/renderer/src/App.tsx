@@ -3,6 +3,7 @@ import { useNotebookStore } from './store/notebookStore'
 import Sidebar from './components/Sidebar/Sidebar'
 import CanvasView from './components/Canvas/CanvasView'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
+import ExternalLinkConfirmDialog from './components/Common/ExternalLinkConfirmDialog'
 
 export default function App(): JSX.Element {
   const { dataRoot, activeContentId, isDarkMode } = useNotebookStore()
@@ -45,9 +46,10 @@ export default function App(): JSX.Element {
                      text-sm text-white shadow-lg dark:bg-gray-100 dark:text-gray-900"
           role="status"
         >
-          Kein Browser verfügbar — Link kopiert: {copiedLinkUrl}
+          No browser available — link copied to clipboard: {copiedLinkUrl}
         </div>
       )}
+      <ExternalLinkConfirmDialog />
     </div>
   )
 }

@@ -12,7 +12,8 @@ import {
   HeadingWithId,
   SlashCommand,
   TocBlock,
-  PageHierarchyBlock
+  PageHierarchyBlock,
+  ExternalLinkGuard
 } from '../../templates'
 import Toolbar from './Toolbar'
 
@@ -39,7 +40,8 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       StarterKit.configure({ heading: false }),
       HeadingWithId,
       Underline,
-      Link.configure({ openOnClick: true }),
+      Link.configure({ openOnClick: false }),
+      ExternalLinkGuard,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Callout,
       TemplateLink,
