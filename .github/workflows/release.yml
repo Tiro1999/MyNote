@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build — ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_glob: 'application/dist/*.exe'
+          - os: macos-latest
+            artifact_glob: 'application/dist/*.dmg'
+          - os: ubuntu-latest
+            artifact_glob: 'application/dist/*.AppImage'
+
+    defaults:
+      run:
+        working-directory: application
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          check-latest: true
+          cache: 'npm'
+          cache-dependency-path: application/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Record exact Node / npm / V8 versions used for this release build
+      - name: Record runtime versions
+        shell: bash
+        run: |
+          {
+            echo "node=$(node --version)"
+            echo "npm=$(npm --version)"
+            echo "v8=$(node -e 'process.stdout.write(process.versions.v8)')"
+            echo "tag=${{ github.ref_name }}"
+            echo "os=${{ matrix.os }}"
+          } > "runtime-versions-${{ matrix.os }}.txt"
+          cat "runtime-versions-${{ matrix.os }}.txt"
+
+      # Stamp the exact semver from the tag into package.json before building
+      - name: Set version from tag
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
+      - name: Build & package
+        run: npm run dist
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}
+          path: ${{ matrix.artifact_glob }}
+          if-no-files-found: error
+
+      - name: Upload runtime versions
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-versions-${{ matrix.os }}
+          path: application/runtime-versions-${{ matrix.os }}.txt
+          if-no-files-found: error
+
+  # The SBOM is derived deterministically from package-lock.json, so it is
+  # identical across platforms — generate it once, and make it mandatory:
+  # a release without an SBOM must not be published (see app-doc/SBOM.md).
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: application
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          check-latest: true
+
+      # Stamp the tag version so the SBOM's root component matches the release
+      - name: Set version from tag
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
+      # npm sbom ships with npm ≥ 11 (Node 26). --package-lock-only reads the
+      # lockfile directly, so no npm ci is needed here.
+      - name: Generate CycloneDX SBOM
+        run: npm sbom --format cyclonedx-json --package-lock-only > "sbom-${{ github.ref_name }}.cdx.json"
+
+      - name: Validate SBOM is well-formed
+        run: |
+          jq -e '.bomFormat == "CycloneDX" and (.components | length > 0)' \
+            "sbom-${{ github.ref_name }}.cdx.json" > /dev/null
+          echo "SBOM contains $(jq '.components | length' "sbom-${{ github.ref_name }}.cdx.json") components"
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: application/sbom-${{ github.ref_name }}.cdx.json
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [build, sbom]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release (draft)
+        uses: softprops/action-gh-release@v2
+        with:
+          name: MyNote ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            artifacts/installer-*/**
+            artifacts/sbom/**
+            artifacts/runtime-versions-*/**

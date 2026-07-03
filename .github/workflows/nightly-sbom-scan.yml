@@ -1,0 +1,143 @@
+name: Nightly SBOM Scan
+
+# Scans the SBOM of the most recent release tag for known vulnerabilities
+# every night. Findings are written to the job summary and reported in a
+# GitHub issue; the run fails when vulnerabilities are found so the signal
+# is visible in the Actions overview.
+
+on:
+  schedule:
+    - cron: '17 3 * * *' # daily, 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    name: Scan latest release SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history — needed to list release tags
+
+      - name: Resolve latest release tag
+        id: tag
+        run: |
+          TAG=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -z "$TAG" ]; then
+            echo "::notice::No release tag found yet — nothing to scan."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Latest release tag: $TAG"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            git checkout "refs/tags/$TAG"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.tag.outputs.found == 'true'
+        with:
+          node-version-file: '.nvmrc'
+          check-latest: true
+
+      # Prefer the SBOM asset attached to the (published) release; fall back to
+      # regenerating it from the tag's package-lock.json — npm sbom is
+      # deterministic from the lockfile, so the result describes the same
+      # dependency set (e.g. while the release is still a draft).
+      - name: Obtain SBOM for ${{ steps.tag.outputs.tag }}
+        if: steps.tag.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if gh release download "$TAG" --pattern 'sbom-*.cdx.json' --output sbom.cdx.json 2>/dev/null; then
+            echo "Downloaded SBOM asset from release $TAG"
+          else
+            echo "::warning::No SBOM asset downloadable for $TAG (release missing or draft) — regenerating from package-lock.json"
+            cd application
+            npm version "${TAG#v}" --no-git-tag-version --allow-same-version
+            npm sbom --format cyclonedx-json --package-lock-only > ../sbom.cdx.json
+            cd ..
+          fi
+          jq -e '.bomFormat == "CycloneDX"' sbom.cdx.json > /dev/null
+
+      - name: Install Grype
+        if: steps.tag.outputs.found == 'true'
+        run: |
+          curl -sSfL https://get.anchore.io/grype | sh -s -- -b "$HOME/.local/bin"
+          "$HOME/.local/bin/grype" version
+
+      - name: Scan SBOM
+        id: scan
+        if: steps.tag.outputs.found == 'true'
+        run: |
+          GRYPE="$HOME/.local/bin/grype"
+          "$GRYPE" sbom:sbom.cdx.json -o table  | tee grype-report.txt
+          "$GRYPE" sbom:sbom.cdx.json -o json > grype-report.json
+          COUNT=$(jq '.matches | length' grype-report.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Nightly SBOM scan — ${{ steps.tag.outputs.tag }}"
+            echo ""
+            if [ "$COUNT" -eq 0 ]; then
+              echo "✅ No known vulnerabilities found."
+            else
+              echo "⚠️ **$COUNT vulnerability finding(s)**"
+              echo ""
+              echo '```'
+              cat grype-report.txt
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload scan reports
+        if: steps.tag.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: grype-report-${{ steps.tag.outputs.tag }}
+          path: |
+            grype-report.txt
+            grype-report.json
+            sbom.cdx.json
+          retention-days: 30
+
+      - name: Report findings as GitHub issue
+        if: steps.tag.outputs.found == 'true' && steps.scan.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          COUNT: ${{ steps.scan.outputs.count }}
+        run: |
+          TITLE="Nightly SBOM scan: vulnerabilities in $TAG"
+
+          {
+            echo "The nightly [Grype](https://github.com/anchore/grype) scan of the \`$TAG\` release SBOM found **$COUNT vulnerability finding(s)**."
+            echo ""
+            echo "| Package | Version | Vulnerability | Severity | Fixed in |"
+            echo "|---------|---------|---------------|----------|----------|"
+            jq -r '.matches[] | "| \(.artifact.name) | \(.artifact.version) | \(.vulnerability.id) | \(.vulnerability.severity) | \(if (.vulnerability.fix.versions | length) > 0 then (.vulnerability.fix.versions | join(", ")) else "—" end) |"' grype-report.json
+            echo ""
+            echo "_Last scan: $(date -u '+%Y-%m-%d %H:%M UTC') — full report in the [workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})._"
+          } > issue-body.md
+
+          gh label create sbom-scan --description "Automated nightly SBOM vulnerability scan" --color D93F0B --force || true
+
+          EXISTING=$(gh issue list --state open --label sbom-scan --json number,title \
+            --jq "[.[] | select(.title == \"$TITLE\")][0].number // empty")
+          if [ -n "$EXISTING" ]; then
+            gh issue edit "$EXISTING" --body-file issue-body.md
+            echo "Updated existing issue #$EXISTING"
+          else
+            gh issue create --title "$TITLE" --label sbom-scan --body-file issue-body.md
+          fi
+
+      - name: Fail run when vulnerabilities were found
+        if: steps.tag.outputs.found == 'true' && steps.scan.outputs.count != '0'
+        run: |
+          echo "::error::${{ steps.scan.outputs.count }} vulnerability finding(s) in the ${{ steps.tag.outputs.tag }} SBOM — see the job summary and the 'sbom-scan' issue."
+          exit 1
