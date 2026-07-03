@@ -47,7 +47,7 @@ const STRUCTURE_COMMANDS: TemplateCommand[] = [
   {
     id: 'table',
     title: 'Tabelle',
-    description: 'Fügt eine 3×3-Tabelle ein — mit + zwischen Zeilen/Spalten erweiterbar',
+    description: 'Fügt eine 3×3-Tabelle ein — per Hover-+ an den Rändern oder Rechtsklick erweiterbar',
     icon: '▦',
     keywords: ['table', 'tabelle', 'grid'],
     action: (editor, range) => insertTable(editor, range)
