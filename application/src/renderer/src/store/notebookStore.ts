@@ -121,6 +121,30 @@ function collectPageIds(page: PageMeta): string[] {
   return [page.id, ...page.children.flatMap(collectPageIds)]
 }
 
+/**
+ * Returns the pages a structural template command (e.g. the subpage
+ * hierarchy list) should list: a chapter's top-level pages, or a page's
+ * direct subpages. Exported for use outside the store, from `templates/`.
+ */
+export function getPageTreeChildren(
+  notebooks: Notebook[],
+  kind: 'section' | 'page' | null,
+  id: string | null
+): PageMeta[] {
+  if (!kind || !id) return []
+  if (kind === 'section') {
+    for (const notebook of notebooks) {
+      const section = notebook.sections.find((sec) => sec.id === id)
+      if (section) return section.pages
+    }
+    return []
+  }
+  const location = findPageLocation(notebooks, id)
+  if (!location) return []
+  const page = location.chain[location.chain.length - 1]
+  return page.children
+}
+
 // ─── Store interface ──────────────────────────────────────────────────────────
 
 interface NotebookStore {

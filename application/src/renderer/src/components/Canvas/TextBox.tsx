@@ -5,6 +5,8 @@ import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import TextAlign from '@tiptap/extension-text-align'
 import type { TextBoxElement } from '../../types'
+import { useNotebookStore } from '../../store/notebookStore'
+import { Callout, TemplateLink, HeadingWithId, SlashCommand } from '../../templates'
 import Toolbar from './Toolbar'
 
 interface Props {
@@ -19,12 +21,22 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
   const resizeStart = useRef({ mouseX: 0, mouseY: 0, elW: 0, elH: 0 })
   const didMove = useRef(false)
 
+  // Captured once at mount for the slash-command menu's structural commands
+  // (e.g. "subpage hierarchy"). Safe because CanvasView remounts TextBox
+  // (via key={el.id}) whenever the active page/chapter changes.
+  const activeContentKind = useNotebookStore((state) => state.activeContentKind)
+  const activeContentId = useNotebookStore((state) => state.activeContentId)
+
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ heading: false }),
+      HeadingWithId,
       Underline,
       Link.configure({ openOnClick: true }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] })
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Callout,
+      TemplateLink,
+      SlashCommand.configure({ context: { kind: activeContentKind, id: activeContentId } })
     ],
     content: element.content as object,
     onUpdate: ({ editor }) => {
