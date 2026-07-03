@@ -17,11 +17,16 @@ export default function App(): JSX.Element {
   // No browser available to open the link (e.g. headless dev container) —
   // the main process already copied it to the clipboard; just surface it.
   useEffect(() => {
-    return window.api.onExternalLinkOpenFailed((url) => {
+    const unsubscribe = window.api.onExternalLinkOpenFailed((url) => {
       setCopiedLinkUrl(url)
       clearTimeout(dismissTimeout.current)
       dismissTimeout.current = setTimeout(() => setCopiedLinkUrl(null), 5000)
     })
+
+    return () => {
+      unsubscribe()
+      clearTimeout(dismissTimeout.current)
+    }
   }, [])
 
   if (!dataRoot) {
