@@ -1,7 +1,7 @@
 import { CALLOUT_META, insertCallout } from './CalloutExtension'
 import type { CalloutVariant } from './CalloutExtension'
-import { insertTableOfContents } from './tableOfContents'
-import { insertPageHierarchy } from './pageHierarchy'
+import { insertTableOfContents } from './TocBlockExtension'
+import { insertPageHierarchy } from './PageHierarchyBlockExtension'
 import type { TemplateCommand } from './types'
 
 /** Extra English/German search keywords per callout variant, in addition to the variant id itself. */
@@ -30,7 +30,7 @@ const STRUCTURE_COMMANDS: TemplateCommand[] = [
   {
     id: 'table-of-contents',
     title: 'Inhaltsverzeichnis',
-    description: 'Verlinkt alle Überschriften dieser Seite',
+    description: 'Verlinkt alle Überschriften dieser Seite (aktualisiert sich automatisch)',
     icon: '📑',
     keywords: ['toc', 'table of contents', 'inhaltsverzeichnis', 'contents', 'überschriften', 'headings'],
     action: (editor, range) => insertTableOfContents(editor, range)
@@ -38,7 +38,7 @@ const STRUCTURE_COMMANDS: TemplateCommand[] = [
   {
     id: 'page-hierarchy',
     title: 'Seitenhierarchie',
-    description: 'Listet die Unterseiten dieser Seite/dieses Kapitels als Links auf',
+    description: 'Listet die Unterseiten dieser Seite/dieses Kapitels als Links auf (aktualisiert sich automatisch)',
     icon: '🗂️',
     keywords: ['subpages', 'unterseiten', 'seitenhierarchie', 'hierarchy', 'pages', 'seiten'],
     action: (editor, range, context) => insertPageHierarchy(editor, range, context)

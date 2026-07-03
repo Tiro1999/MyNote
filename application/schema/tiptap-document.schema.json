@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mynote.app/schema/tiptap-document.schema.json",
   "title": "MyNote Rich-Text Document (TipTap / ProseMirror JSON)",
-  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink). MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
+  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink, TocBlock, PageHierarchyBlock). TocBlock/PageHierarchyBlock are persisted only as their bare type+attrs \u2014 their visible content is computed live at render time from the document/notebook store, not stored on disk. MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
   "type": "object",
   "additionalProperties": false,
   "required": ["type", "content"],
@@ -104,6 +104,33 @@
                   "kind": { "type": "string", "enum": ["heading", "page"] },
                   "targetId": { "type": "string", "minLength": 1 },
                   "label": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "tocBlock (templates/TocBlockExtension.ts): live table-of-contents block, block-level atom \u2014 no attrs, content or text; its list is computed live from the page's headings at render time, never persisted.",
+          "if": { "properties": { "type": { "const": "tocBlock" } }, "required": ["type"] },
+          "then": {
+            "not": {
+              "anyOf": [{ "required": ["attrs"] }, { "required": ["content"] }, { "required": ["text"] }]
+            }
+          }
+        },
+        {
+          "$comment": "pageHierarchyBlock (templates/PageHierarchyBlockExtension.ts): live page/subpage list, block-level atom \u2014 only remembers the anchor (kind + targetId) it was inserted for; the list itself is computed live from the notebook store at render time, never persisted.",
+          "if": { "properties": { "type": { "const": "pageHierarchyBlock" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["kind", "targetId"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["section", "page"] },
+                  "targetId": { "type": ["string", "null"] }
                 }
               }
             }

@@ -6,7 +6,14 @@ import Link from '@tiptap/extension-link'
 import TextAlign from '@tiptap/extension-text-align'
 import type { TextBoxElement } from '../../types'
 import { useNotebookStore } from '../../store/notebookStore'
-import { Callout, TemplateLink, HeadingWithId, SlashCommand } from '../../templates'
+import {
+  Callout,
+  TemplateLink,
+  HeadingWithId,
+  SlashCommand,
+  TocBlock,
+  PageHierarchyBlock
+} from '../../templates'
 import Toolbar from './Toolbar'
 
 interface Props {
@@ -36,6 +43,8 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Callout,
       TemplateLink,
+      TocBlock,
+      PageHierarchyBlock,
       SlashCommand.configure({ context: { kind: activeContentKind, id: activeContentId } })
     ],
     content: element.content as object,
