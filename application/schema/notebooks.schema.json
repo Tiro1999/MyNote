@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mynote.app/schema/notebooks.schema.json",
+  "title": "MyNote Notebooks Manifest",
+  "description": "Root manifest stored at '{dataRoot}/notebooks.json'. Holds the full notebook \u2192 chapter \u2192 page/subpage hierarchy and metadata only \u2014 actual canvas content lives in separate 'page.json' files, see page-content.schema.json. Mirrors application/src/renderer/src/types/index.ts (Notebook, Section, PageMeta) and the mutations in application/src/renderer/src/store/notebookStore.ts.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/notebook" },
+  "$defs": {
+    "notebook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "color", "sections"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "nanoid, unique within notebooks.json." },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/hexColor" },
+        "sections": {
+          "type": "array",
+          "description": "The notebook's chapters.",
+          "items": { "$ref": "#/$defs/section" }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "notebookId", "name", "color", "pages"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "notebookId": { "type": "string", "minLength": 1, "description": "Id of the owning notebook. Must match an entry in the top-level array." },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/hexColor" },
+        "collapsed": {
+          "type": "boolean",
+          "description": "Sidebar collapse state of this chapter's page tree. Absent is equivalent to false."
+        },
+        "pages": {
+          "type": "array",
+          "description": "Top-level pages of this chapter (not including nested subpages, which live under each page's 'children').",
+          "items": { "$ref": "#/$defs/pageMeta" }
+        }
+      }
+    },
+    "pageMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sectionId", "title", "createdAt", "updatedAt", "children"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "sectionId": { "type": "string", "minLength": 1, "description": "Id of the chapter this page (or subpage) belongs to \u2014 the same for every node in a subpage chain." },
+        "title": { "type": "string", "minLength": 1 },
+        "collapsed": {
+          "type": "boolean",
+          "description": "Sidebar collapse state of this page's subpage tree. Absent is equivalent to false."
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "children": {
+          "type": "array",
+          "description": "Nested subpages, recursively of the same shape. Empty array if there are none (never omitted/null).",
+          "items": { "$ref": "#/$defs/pageMeta" }
+        }
+      }
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "examples": ["#0078D4", "#E3008C"]
+    }
+  }
+}

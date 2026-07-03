@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mynote.app/schema/tiptap-document.schema.json",
+  "title": "MyNote Rich-Text Document (TipTap / ProseMirror JSON)",
+  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink). MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "content"],
+  "properties": {
+    "type": { "const": "doc" },
+    "content": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "attrs": { "type": "object" },
+        "content": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "text": { "type": "string", "minLength": 1 },
+        "marks": { "type": "array", "items": { "$ref": "#/$defs/mark" } }
+      },
+      "allOf": [
+        {
+          "$comment": "text: leaf inline node, requires non-empty 'text', no content.",
+          "if": { "properties": { "type": { "const": "text" } }, "required": ["type"] },
+          "then": { "required": ["text"], "not": { "required": ["content"] } }
+        },
+        {
+          "$comment": "heading: HeadingWithId \u2014 level 1-6, optional slug 'id' assigned on-demand by the table-of-contents command.",
+          "if": { "properties": { "type": { "const": "heading" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["level"],
+                "properties": {
+                  "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+                  "id": { "type": ["string", "null"] },
+                  "textAlign": { "$ref": "#/$defs/textAlign" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "paragraph: TextAlign extension adds an optional 'textAlign' attr.",
+          "if": { "properties": { "type": { "const": "paragraph" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "attrs": { "type": "object", "properties": { "textAlign": { "$ref": "#/$defs/textAlign" } } }
+            }
+          }
+        },
+        {
+          "$comment": "codeBlock: StarterKit's default code block, optional language attr.",
+          "if": { "properties": { "type": { "const": "codeBlock" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "attrs": { "type": "object", "properties": { "language": { "type": ["string", "null"] } } }
+            }
+          }
+        },
+        {
+          "$comment": "horizontalRule / hardBreak: leaf nodes, no content or text.",
+          "if": {
+            "properties": { "type": { "enum": ["horizontalRule", "hardBreak"] } },
+            "required": ["type"]
+          },
+          "then": { "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] } }
+        },
+        {
+          "$comment": "callout (templates/CalloutExtension.ts): variant enum, requires block+ content (never empty \u2014 insertCallout always seeds one paragraph).",
+          "if": { "properties": { "type": { "const": "callout" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs", "content"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["variant"],
+                "properties": { "variant": { "type": "string", "enum": ["info", "note", "warning", "error"] } }
+              },
+              "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } }
+            }
+          }
+        },
+        {
+          "$comment": "templateLink (templates/TemplateLinkExtension.ts): inline atom leaf \u2014 no content/text, just attrs.",
+          "if": { "properties": { "type": { "const": "templateLink" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["kind", "targetId", "label"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["heading", "page"] },
+                  "targetId": { "type": "string", "minLength": 1 },
+                  "label": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "mark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["bold", "italic", "strike", "code", "underline", "link"] },
+        "attrs": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "$comment": "link mark (extension-link): href is the only attribute the app itself sets via setLink({ href }).",
+          "if": { "properties": { "type": { "const": "link" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["href"],
+                "properties": {
+                  "href": { "type": "string" },
+                  "target": { "type": ["string", "null"] },
+                  "rel": { "type": ["string", "null"] },
+                  "class": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "textAlign": {
+      "type": ["string", "null"],
+      "enum": ["left", "center", "right", "justify", null]
+    }
+  }
+}
