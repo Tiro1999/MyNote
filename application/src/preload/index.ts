@@ -25,6 +25,11 @@ const api = {
       filters: Array<{ name: string; extensions: string[] }>
     ): Promise<string | null> =>
       ipcRenderer.invoke('dialog:openFile', filters)
+  },
+  onExternalLinkOpenFailed: (callback: (url: string) => void): (() => void) => {
+    const listener = (_event: unknown, url: string): void => callback(url)
+    ipcRenderer.on('external-link-open-failed', listener)
+    return () => ipcRenderer.removeListener('external-link-open-failed', listener)
   }
 }
 

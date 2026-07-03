@@ -17,6 +17,10 @@ declare global {
         openDirectory(): Promise<string | null>
         openFile(filters: Array<{ name: string; extensions: string[] }>): Promise<string | null>
       }
+      /** Fired when a hyperlink click couldn't be opened in a browser (e.g. no browser
+       * available in a headless dev environment); the URL was copied to the clipboard
+       * instead. Returns an unsubscribe function. */
+      onExternalLinkOpenFailed(callback: (url: string) => void): () => void
     }
   }
 }

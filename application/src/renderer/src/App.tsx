@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNotebookStore } from './store/notebookStore'
 import Sidebar from './components/Sidebar/Sidebar'
 import CanvasView from './components/Canvas/CanvasView'
@@ -6,10 +6,22 @@ import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
 
 export default function App(): JSX.Element {
   const { dataRoot, activeContentId, isDarkMode } = useNotebookStore()
+  const [copiedLinkUrl, setCopiedLinkUrl] = useState<string | null>(null)
+  const dismissTimeout = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
+
+  // No browser available to open the link (e.g. headless dev container) —
+  // the main process already copied it to the clipboard; just surface it.
+  useEffect(() => {
+    return window.api.onExternalLinkOpenFailed((url) => {
+      setCopiedLinkUrl(url)
+      clearTimeout(dismissTimeout.current)
+      dismissTimeout.current = setTimeout(() => setCopiedLinkUrl(null), 5000)
+    })
+  }, [])
 
   if (!dataRoot) {
     return <WelcomeScreen />
@@ -27,6 +39,15 @@ export default function App(): JSX.Element {
           </div>
         )}
       </main>
+      {copiedLinkUrl && (
+        <div
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-md bg-gray-900 px-4 py-2
+                     text-sm text-white shadow-lg dark:bg-gray-100 dark:text-gray-900"
+          role="status"
+        >
+          Kein Browser verfügbar — Link kopiert: {copiedLinkUrl}
+        </div>
+      )}
     </div>
   )
 }
