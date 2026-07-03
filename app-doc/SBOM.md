@@ -30,6 +30,15 @@ Requires npm ≥ 11 (ships with Node 26+). See [`runtime-versions.md`](./runtime
 
 SBOM files are attached to the GitHub Release matching the same `vMajor.Minor.Patch` tag.
 
+## Nightly vulnerability scan
+
+The [`nightly-sbom-scan.yml`](../.github/workflows/nightly-sbom-scan.yml) workflow runs every
+night against the SBOM of the **most recent release tag**. It scans with
+[Grype](https://github.com/anchore/grype) and, when vulnerabilities are found, fails the run
+and opens/updates a GitHub issue labeled `sbom-scan` with a per-package findings table.
+It prefers the SBOM asset attached to the published release and falls back to regenerating
+the SBOM from the tag's `package-lock.json` (identical content) while a release is still a draft.
+
 ## Updating dependencies
 
 ```bash

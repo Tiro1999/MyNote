@@ -27,7 +27,7 @@ and commit the change together with any updated `package-lock.json`.
 | **npm** | `^11.0.0` (latest 11.x patch) | `npm --version` |
 | **V8** (in Node.js) | extracted at build time | `node -e "console.log(process.versions.v8)"` |
 
-> The `.nvmrc` file in `application/` pins the Node **major** version to `26`.
+> The `.nvmrc` file in the repo root pins the Node **major** version to `26`.
 > For fully reproducible builds, replace the range above with the exact output of `node --version`
 > at the time of release (e.g. `26.2.1`) and record it in the release SBOM.
 
