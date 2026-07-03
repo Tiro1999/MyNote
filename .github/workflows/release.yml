@@ -100,7 +100,7 @@ jobs:
       # npm sbom ships with npm ≥ 11 (Node 26). --package-lock-only reads the
       # lockfile directly, so no npm ci is needed here.
       - name: Generate CycloneDX SBOM
-        run: npm sbom --format cyclonedx-json --package-lock-only > "sbom-${{ github.ref_name }}.cdx.json"
+        run: npm sbom --sbom-format cyclonedx --package-lock-only > "sbom-${{ github.ref_name }}.cdx.json"
 
       - name: Validate SBOM is well-formed
         run: |

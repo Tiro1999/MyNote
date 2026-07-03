@@ -17,7 +17,7 @@ alongside the platform installers.
 
 ```bash
 cd application
-npm sbom --format cyclonedx-json --package-lock-only > sbom-local.cdx.json
+npm sbom --sbom-format cyclonedx --package-lock-only > sbom-local.cdx.json
 ```
 
 Requires npm ≥ 11 (ships with Node 26+). See [`runtime-versions.md`](./runtime-versions.md) for pinned version details.

@@ -90,7 +90,7 @@ Runtime versions are sourced into the CycloneDX SBOM generated during release:
 
 ```bash
 cd application
-npm sbom --format cyclonedx-json --package-lock-only > sbom-vX.Y.Z.cdx.json
+npm sbom --sbom-format cyclonedx --package-lock-only > sbom-vX.Y.Z.cdx.json
 ```
 
 See [`SBOM.md`](./SBOM.md) for the full policy.

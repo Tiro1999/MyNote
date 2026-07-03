@@ -60,7 +60,7 @@ jobs:
             echo "::warning::No SBOM asset downloadable for $TAG (release missing or draft) — regenerating from package-lock.json"
             cd application
             npm version "${TAG#v}" --no-git-tag-version --allow-same-version
-            npm sbom --format cyclonedx-json --package-lock-only > ../sbom.cdx.json
+            npm sbom --sbom-format cyclonedx --package-lock-only > ../sbom.cdx.json
             cd ..
           fi
           jq -e '.bomFormat == "CycloneDX"' sbom.cdx.json > /dev/null
