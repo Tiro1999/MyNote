@@ -27,9 +27,18 @@ export default function ExternalLinkConfirmDialog(): JSX.Element | null {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Open External Link</h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+      <div
+        className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="external-link-dialog-title"
+      >
+        <h2
+          id="external-link-dialog-title"
+          className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+        >
+          Open External Link
+        </h2>
           This link will open outside MyNote in your default browser:
         </p>
         <p className="mt-2 break-all rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-800 dark:bg-gray-800 dark:text-gray-200">
