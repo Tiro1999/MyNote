@@ -39,6 +39,7 @@ export default function ExternalLinkConfirmDialog(): JSX.Element | null {
         >
           Open External Link
         </h2>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
           This link will open outside MyNote in your default browser:
         </p>
         <p className="mt-2 break-all rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-800 dark:bg-gray-800 dark:text-gray-200">

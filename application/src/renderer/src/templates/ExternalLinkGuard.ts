@@ -18,7 +18,7 @@ export const ExternalLinkGuard = Extension.create({
         key: new PluginKey('externalLinkGuard'),
         props: {
           handleClick: (view, _pos, event) => {
-            if (event.button !== 0) return false
+            if (event.button !== 0 || !view.editable) return false
             const target = event.target
             if (!(target instanceof Element)) return false
             const anchor = target.closest('a[href]') as HTMLAnchorElement | null
