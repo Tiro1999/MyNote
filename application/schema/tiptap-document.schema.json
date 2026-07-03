@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mynote.app/schema/tiptap-document.schema.json",
   "title": "MyNote Rich-Text Document (TipTap / ProseMirror JSON)",
-  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink, TocBlock, PageHierarchyBlock). TocBlock/PageHierarchyBlock are persisted only as their bare type+attrs \u2014 their visible content is computed live at render time from the document/notebook store, not stored on disk. MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
+  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign, @tiptap/extension-table + table-row/table-header/table-cell) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink, TocBlock, PageHierarchyBlock, TableWithControls). TocBlock/PageHierarchyBlock are persisted only as their bare type+attrs \u2014 their visible content is computed live at render time from the document/notebook store, not stored on disk. TableWithControls only customizes the table node's editor NodeView (the add-row/add-column '+' buttons); the persisted table/tableRow/tableHeader/tableCell JSON is unchanged from the stock @tiptap/extension-table schema. MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
   "type": "object",
   "additionalProperties": false,
   "required": ["type", "content"],
@@ -133,6 +133,43 @@
                   "targetId": { "type": ["string", "null"] }
                 }
               }
+            }
+          }
+        },
+        {
+          "$comment": "table (@tiptap/extension-table, wrapped by templates/TableWithControls.ts for the add-row/add-column '+' UI only \u2014 persisted shape is stock): one or more tableRow children.",
+          "if": { "properties": { "type": { "const": "table" } }, "required": ["type"] },
+          "then": {
+            "required": ["content"],
+            "properties": { "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } } }
+          }
+        },
+        {
+          "$comment": "tableRow (@tiptap/extension-table-row): one or more tableCell/tableHeader children.",
+          "if": { "properties": { "type": { "const": "tableRow" } }, "required": ["type"] },
+          "then": {
+            "required": ["content"],
+            "properties": { "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } } }
+          }
+        },
+        {
+          "$comment": "tableCell / tableHeader (@tiptap/extension-table-cell, @tiptap/extension-table-header): block+ content, colspan/rowspan default 1, optional colwidth array set by column resizing (unused here since resizable: false, but still valid on documents from a future/other client).",
+          "if": {
+            "properties": { "type": { "enum": ["tableCell", "tableHeader"] } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["content"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "properties": {
+                  "colspan": { "type": "integer", "minimum": 1 },
+                  "rowspan": { "type": "integer", "minimum": 1 },
+                  "colwidth": { "type": ["array", "null"], "items": { "type": ["integer", "null"] } }
+                }
+              },
+              "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } }
             }
           }
         }

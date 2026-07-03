@@ -4,6 +4,9 @@ import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import TextAlign from '@tiptap/extension-text-align'
+import TableRow from '@tiptap/extension-table-row'
+import TableHeader from '@tiptap/extension-table-header'
+import TableCell from '@tiptap/extension-table-cell'
 import type { TextBoxElement } from '../../types'
 import { useNotebookStore } from '../../store/notebookStore'
 import {
@@ -13,7 +16,8 @@ import {
   SlashCommand,
   TocBlock,
   PageHierarchyBlock,
-  ExternalLinkGuard
+  ExternalLinkGuard,
+  TableWithControls
 } from '../../templates'
 import Toolbar from './Toolbar'
 
@@ -47,6 +51,10 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       TemplateLink,
       TocBlock,
       PageHierarchyBlock,
+      TableWithControls.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
       SlashCommand.configure({ context: { kind: activeContentKind, id: activeContentId } })
     ],
     content: element.content as object,

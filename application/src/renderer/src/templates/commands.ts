@@ -2,6 +2,7 @@ import { CALLOUT_META, insertCallout } from './CalloutExtension'
 import type { CalloutVariant } from './CalloutExtension'
 import { insertTableOfContents } from './TocBlockExtension'
 import { insertPageHierarchy } from './PageHierarchyBlockExtension'
+import { insertTable } from './TableCommand'
 import type { TemplateCommand } from './types'
 
 /** Extra English/German search keywords per callout variant, in addition to the variant id itself. */
@@ -42,6 +43,14 @@ const STRUCTURE_COMMANDS: TemplateCommand[] = [
     icon: '🗂️',
     keywords: ['subpages', 'unterseiten', 'seitenhierarchie', 'hierarchy', 'pages', 'seiten'],
     action: (editor, range, context) => insertPageHierarchy(editor, range, context)
+  },
+  {
+    id: 'table',
+    title: 'Tabelle',
+    description: 'Fügt eine 3×3-Tabelle ein — mit + zwischen Zeilen/Spalten erweiterbar',
+    icon: '▦',
+    keywords: ['table', 'tabelle', 'grid'],
+    action: (editor, range) => insertTable(editor, range)
   }
 ]
 
