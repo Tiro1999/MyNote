@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, clipboard } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as fs from 'fs'
@@ -21,9 +21,30 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => mainWindow.show())
 
-  // Open external links in the system browser
+  // Open external links (e.g. clicked hyperlinks in a text box) in the
+  // system's default browser instead of a new Electron window. On Linux this
+  // shells out to `xdg-open`; in a headless devcontainer/Codespace without a
+  // desktop session/browser there's nothing for it to launch, so as a
+  // fallback we copy the URL to the clipboard and tell the renderer, instead
+  // of leaving the user with just a silent console error.
+  const allowedExternalProtocols = new Set(['http:', 'https:', 'mailto:'])
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const parsedUrl = new URL(details.url)
+      if (!allowedExternalProtocols.has(parsedUrl.protocol)) {
+        console.warn('Blocked external link with unsupported protocol:', details.url)
+        return { action: 'deny' }
+      }
+    } catch (error) {
+      console.warn('Blocked invalid external link URL:', details.url, error)
+      return { action: 'deny' }
+    }
+
+    shell.openExternal(details.url).catch((error) => {
+      console.error('Failed to open external link, copied to clipboard instead:', details.url, error)
+      clipboard.writeText(details.url)
+      mainWindow.webContents.send('external-link-open-failed', details.url)
+    })
     return { action: 'deny' }
   })
 

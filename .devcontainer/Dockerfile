@@ -28,6 +28,7 @@ RUN curl -fsSL https://github.com/github/copilot-cli/releases/latest/download/co
 
 # Native libraries needed by Electron for compilation, packaging, and local runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    xdg-utils \
     libx11-dev \
     libxkbfile-dev \
     libsecret-1-dev \

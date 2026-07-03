@@ -5,6 +5,7 @@ dist/
 Thumbs.db
 *.env
 *.env.local
+*.tsbuildinfo
 
 # Generated build artifacts (recreated by build-myNote.sh on every run)
 audit-all.json
