@@ -1,0 +1,14 @@
+# MyNotes Notebook
+# Version Changelog
+
+
+-------------------------------------------------------------------------------------------
+v0.1.0
+
+- 04.07.2026
+- Initial release of MyNotes Notebook.
+- Templates for table, colored text fields, content and site views are included.
+- Hyperlinks are supported in the content view.
+- SBOM tracking is included for all dependencies.
+
+-------------------------------------------------------------------------------------------
