@@ -44,8 +44,20 @@ function runAt(editor: Editor, getPos: GetPos, row: number, col: number, command
   const tablePos = typeof pos === 'number' ? pos : null
   const table = tablePos !== null ? editor.state.doc.nodeAt(tablePos) : null
   if (tablePos === null || !table) return
+
+  // prosemirror-tables refuses to delete the final row/column (a table must
+  // keep at least one of each), which would leave a lone leftover row/column
+  // behind. When that last one is deleted, remove the whole table instead.
+  let effective: TableCommandName = command
+  if (command === 'deleteRow' || command === 'deleteColumn') {
+    const map = TableMap.get(table)
+    if ((command === 'deleteRow' && map.height <= 1) || (command === 'deleteColumn' && map.width <= 1)) {
+      effective = 'deleteTable'
+    }
+  }
+
   selectCell(editor, table, tablePos, row, col)
-  editor.chain().focus()[command]().run()
+  editor.chain().focus()[effective]().run()
 }
 
 // ── Context menu ────────────────────────────────────────────────────────────
