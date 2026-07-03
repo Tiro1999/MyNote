@@ -27,7 +27,19 @@ function createWindow(): void {
   // desktop session/browser there's nothing for it to launch, so as a
   // fallback we copy the URL to the clipboard and tell the renderer, instead
   // of leaving the user with just a silent console error.
+  const allowedExternalProtocols = new Set(['http:', 'https:', 'mailto:'])
   mainWindow.webContents.setWindowOpenHandler((details) => {
+    try {
+      const parsedUrl = new URL(details.url)
+      if (!allowedExternalProtocols.has(parsedUrl.protocol)) {
+        console.warn('Blocked external link with unsupported protocol:', details.url)
+        return { action: 'deny' }
+      }
+    } catch (error) {
+      console.warn('Blocked invalid external link URL:', details.url, error)
+      return { action: 'deny' }
+    }
+
     shell.openExternal(details.url).catch((error) => {
       console.error('Failed to open external link, copied to clipboard instead:', details.url, error)
       clipboard.writeText(details.url)
