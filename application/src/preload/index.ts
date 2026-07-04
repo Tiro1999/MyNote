@@ -32,6 +32,14 @@ const api = {
     setAutoUpdate: (enabled: boolean): Promise<{ autoUpdateEnabled: boolean }> =>
       ipcRenderer.invoke('settings:setAutoUpdate', enabled)
   },
+  updates: {
+    check: (): Promise<
+      | { status: 'dev' }
+      | { status: 'available'; version: string }
+      | { status: 'not-available'; version: string }
+      | { status: 'error'; error: string }
+    > => ipcRenderer.invoke('updates:check')
+  },
   onExternalLinkOpenFailed: (callback: (url: string) => void): (() => void) => {
     const listener = (_event: unknown, url: string): void => callback(url)
     ipcRenderer.on('external-link-open-failed', listener)

@@ -8,12 +8,15 @@ interface Props {
 export default function SettingsDialog({ open, onClose }: Props): JSX.Element | null {
   const [autoUpdate, setAutoUpdate] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [checking, setChecking] = useState(false)
+  const [checkMessage, setCheckMessage] = useState<string | null>(null)
 
   // Load the current preference from the main process each time the dialog opens.
   useEffect(() => {
     if (!open) return
     let cancelled = false
     setLoading(true)
+    setCheckMessage(null)
     window.api.settings
       .get()
       .then((settings) => {
@@ -33,6 +36,34 @@ export default function SettingsDialog({ open, onClose }: Props): JSX.Element | 
     const next = !autoUpdate
     setAutoUpdate(next) // optimistic — persistence is fast and can't meaningfully fail
     await window.api.settings.setAutoUpdate(next)
+  }
+
+  const handleCheckForUpdates = async (): Promise<void> => {
+    setChecking(true)
+    setCheckMessage('Checking for updates…')
+    try {
+      const result = await window.api.updates.check()
+      switch (result.status) {
+        case 'available':
+          setCheckMessage(
+            `Update to v${result.version} found — it will install when you restart MyNote.`
+          )
+          break
+        case 'not-available':
+          setCheckMessage(`You're on the latest version (v${result.version}).`)
+          break
+        case 'dev':
+          setCheckMessage('Updates are only available in the installed app.')
+          break
+        case 'error':
+          setCheckMessage(`Couldn't check for updates: ${result.error}`)
+          break
+      }
+    } catch (error) {
+      setCheckMessage(`Couldn't check for updates: ${(error as Error).message}`)
+    } finally {
+      setChecking(false)
+    }
   }
 
   return (
@@ -77,6 +108,22 @@ export default function SettingsDialog({ open, onClose }: Props): JSX.Element | 
                 }`}
               />
             </button>
+          </div>
+
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              disabled={checking}
+              onClick={handleCheckForUpdates}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            >
+              {checking ? 'Checking…' : 'Check for updates'}
+            </button>
+            {checkMessage && (
+              <span className="text-xs text-gray-500 dark:text-gray-400" role="status">
+                {checkMessage}
+              </span>
+            )}
           </div>
         </section>
 

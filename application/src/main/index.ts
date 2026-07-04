@@ -183,3 +183,44 @@ ipcMain.handle('settings:setAutoUpdate', (_, enabled: boolean): AppSettings => {
   if (enabled) maybeCheckForUpdates()
   return settings
 })
+
+// ─── Manual update check ──────────────────────────────────────────────────────
+// Works regardless of the auto-update setting — this is how a user who opted out
+// of automatic updates still checks on demand. Resolves with a discrete status so
+// the UI can give clear feedback. If an update is found, autoDownload (on by
+// default) fetches it and it installs on the next restart.
+
+type UpdateCheckStatus =
+  | { status: 'dev' }
+  | { status: 'available'; version: string }
+  | { status: 'not-available'; version: string }
+  | { status: 'error'; error: string }
+
+ipcMain.handle('updates:check', (): Promise<UpdateCheckStatus> => {
+  if (!app.isPackaged) return Promise.resolve({ status: 'dev' })
+
+  return new Promise<UpdateCheckStatus>((resolve) => {
+    const cleanup = (): void => {
+      autoUpdater.removeListener('update-available', onAvailable)
+      autoUpdater.removeListener('update-not-available', onNotAvailable)
+      autoUpdater.removeListener('error', onError)
+    }
+    const onAvailable = (info: { version: string }): void => {
+      cleanup()
+      resolve({ status: 'available', version: info.version })
+    }
+    const onNotAvailable = (): void => {
+      cleanup()
+      resolve({ status: 'not-available', version: app.getVersion() })
+    }
+    const onError = (error: Error): void => {
+      cleanup()
+      resolve({ status: 'error', error: error?.message ?? String(error) })
+    }
+
+    autoUpdater.once('update-available', onAvailable)
+    autoUpdater.once('update-not-available', onNotAvailable)
+    autoUpdater.once('error', onError)
+    autoUpdater.checkForUpdates().catch((error) => onError(error as Error))
+  })
+})

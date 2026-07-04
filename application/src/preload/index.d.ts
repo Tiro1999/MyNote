@@ -21,6 +21,14 @@ declare global {
         get(): Promise<{ autoUpdateEnabled: boolean }>
         setAutoUpdate(enabled: boolean): Promise<{ autoUpdateEnabled: boolean }>
       }
+      updates: {
+        check(): Promise<
+          | { status: 'dev' }
+          | { status: 'available'; version: string }
+          | { status: 'not-available'; version: string }
+          | { status: 'error'; error: string }
+        >
+      }
       /** Fired when a hyperlink click couldn't be opened in a browser (e.g. no browser
        * available in a headless dev environment); the URL was copied to the clipboard
        * instead. Returns an unsubscribe function. */

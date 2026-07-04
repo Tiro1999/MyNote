@@ -49,4 +49,3 @@ jobs:
           echo "node=$(node --version)"
           echo "npm=$(npm --version)"
           echo "v8=$(node -e 'process.stdout.write(process.versions.v8)')"
-          retention-days: 7
