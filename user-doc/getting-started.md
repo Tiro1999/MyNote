@@ -53,6 +53,10 @@ need to visit the Releases page again.
 > Updates only appear once a version has been *published* on the Releases page.
 > Drafts and pre-releases are invisible to the updater.
 
+**Prefer to update manually?** Open **⚙️ Settings** (top of the sidebar, or the
+top-right of the welcome screen) and turn **Automatic updates** off. While it's
+off, MyNote never contacts GitHub — you decide when to grab a new release.
+
 On **macOS**, auto-update isn't available (it requires Apple code signing), so
 grab the newest `.dmg` from the [Releases](../../../releases) page when you want
 to update.

@@ -4,6 +4,48 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import * as fs from 'fs'
 
+// ─── App settings ───────────────────────────────────────────────────────────
+// Persisted as JSON in the OS-specific userData directory so the main process
+// can read the user's preferences at startup (before any window/renderer
+// exists). Auto-updates default to ON; users can opt out in Settings.
+
+interface AppSettings {
+  autoUpdateEnabled: boolean
+}
+
+const DEFAULT_SETTINGS: AppSettings = { autoUpdateEnabled: true }
+
+function settingsPath(): string {
+  return join(app.getPath('userData'), 'settings.json')
+}
+
+function readSettings(): AppSettings {
+  try {
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(settingsPath(), 'utf-8')) }
+  } catch {
+    // No file yet or unreadable/corrupt — fall back to defaults.
+    return { ...DEFAULT_SETTINGS }
+  }
+}
+
+function writeSettings(settings: AppSettings): void {
+  fs.writeFileSync(settingsPath(), JSON.stringify(settings, null, 2), 'utf-8')
+}
+
+// Check GitHub Releases for a newer version — but only in the packaged app and
+// only when the user hasn't opted out. electron-updater ignores draft and
+// pre-release releases, and a failed check must never block the app.
+function maybeCheckForUpdates(): void {
+  if (!app.isPackaged) return
+  if (!readSettings().autoUpdateEnabled) {
+    console.log('Automatic updates disabled in settings — skipping update check.')
+    return
+  }
+  autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+    console.error('Update check failed:', error)
+  })
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1400,
@@ -65,15 +107,7 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  // Check GitHub Releases for a newer version. electron-updater ignores draft
-  // and pre-release releases, so users only ever get updates you have actually
-  // published. Only runs in the packaged app (no-ops in dev), and a failed
-  // check (offline, rate-limited, no release yet) must never block startup.
-  if (app.isPackaged) {
-    autoUpdater.checkForUpdatesAndNotify().catch((error) => {
-      console.error('Update check failed:', error)
-    })
-  }
+  maybeCheckForUpdates()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -136,4 +170,16 @@ ipcMain.handle('dialog:openDirectory', async () => {
 ipcMain.handle('dialog:openFile', async (_, filters: Electron.FileFilter[]) => {
   const result = await dialog.showOpenDialog({ properties: ['openFile'], filters })
   return result.canceled ? null : result.filePaths[0]
+})
+
+// ─── Settings IPC ───────────────────────────────────────────────────────────
+
+ipcMain.handle('settings:get', (): AppSettings => readSettings())
+
+ipcMain.handle('settings:setAutoUpdate', (_, enabled: boolean): AppSettings => {
+  const settings = { ...readSettings(), autoUpdateEnabled: enabled }
+  writeSettings(settings)
+  // Re-enabling should feel immediate — kick off a check right away.
+  if (enabled) maybeCheckForUpdates()
+  return settings
 })

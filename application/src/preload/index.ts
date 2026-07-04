@@ -26,6 +26,12 @@ const api = {
     ): Promise<string | null> =>
       ipcRenderer.invoke('dialog:openFile', filters)
   },
+  settings: {
+    get: (): Promise<{ autoUpdateEnabled: boolean }> =>
+      ipcRenderer.invoke('settings:get'),
+    setAutoUpdate: (enabled: boolean): Promise<{ autoUpdateEnabled: boolean }> =>
+      ipcRenderer.invoke('settings:setAutoUpdate', enabled)
+  },
   onExternalLinkOpenFailed: (callback: (url: string) => void): (() => void) => {
     const listener = (_event: unknown, url: string): void => callback(url)
     ipcRenderer.on('external-link-open-failed', listener)

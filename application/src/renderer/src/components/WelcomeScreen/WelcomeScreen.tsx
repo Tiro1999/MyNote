@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { useNotebookStore } from '../../store/notebookStore'
 import ThemeToggle from '../Common/ThemeToggle'
+import SettingsDialog from '../Common/SettingsDialog'
 
 export default function WelcomeScreen(): JSX.Element {
   const { setDataRoot } = useNotebookStore()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleOpen = async (): Promise<void> => {
     const path = await window.api.dialog.openDirectory()
@@ -11,9 +14,19 @@ export default function WelcomeScreen(): JSX.Element {
 
   return (
     <div className="relative flex h-screen w-screen items-center justify-center bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 flex items-center gap-2">
         <ThemeToggle />
+        <button
+          type="button"
+          title="Settings"
+          aria-label="Settings"
+          className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <span aria-hidden="true">⚙️</span>
+        </button>
       </div>
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <div className="text-center max-w-md px-6">
         <h1 className="mb-3 text-5xl font-bold tracking-tight text-gray-800 dark:text-gray-100">
           MyNote

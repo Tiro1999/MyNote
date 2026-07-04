@@ -4,6 +4,7 @@ import type { Notebook, Section, PageMeta } from '../../types'
 import TextInputDialog from '../Common/TextInputDialog'
 import ContextMenu, { ContextMenuItem } from '../Common/ContextMenu'
 import ConfirmDialog from '../Common/ConfirmDialog'
+import SettingsDialog from '../Common/SettingsDialog'
 import ThemeToggle from '../Common/ThemeToggle'
 
 type RenameTarget = { kind: 'notebook' | 'section' | 'page'; id: string; initialValue: string }
@@ -32,6 +33,7 @@ export default function Sidebar(): JSX.Element {
     deletePage
   } = useNotebookStore()
   const [notebookDialogOpen, setNotebookDialogOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [sectionNotebookId, setSectionNotebookId] = useState<string | null>(null)
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
@@ -66,6 +68,15 @@ export default function Sidebar(): JSX.Element {
           </span>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <button
+              type="button"
+              title="Settings"
+              aria-label="Settings"
+              className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <span aria-hidden="true">⚙️</span>
+            </button>
             <button
               className="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               onClick={() => setNotebookDialogOpen(true)}
@@ -148,6 +159,7 @@ export default function Sidebar(): JSX.Element {
         </nav>
       </aside>
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <TextInputDialog
         open={notebookDialogOpen}
         title="Create notebook"
