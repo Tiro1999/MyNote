@@ -1,5 +1,4 @@
 *.env
 .github/*
 !.github/workflows/
-/
 application/local-res
