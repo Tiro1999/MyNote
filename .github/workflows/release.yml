@@ -28,9 +28,9 @@ jobs:
         working-directory: application
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
           check-latest: true
@@ -62,14 +62,14 @@ jobs:
         run: npm run dist
 
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: installer-${{ matrix.os }}
           path: ${{ matrix.artifact_glob }}
           if-no-files-found: error
 
       - name: Upload runtime versions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: runtime-versions-${{ matrix.os }}
           path: application/runtime-versions-${{ matrix.os }}.txt
@@ -86,9 +86,9 @@ jobs:
         working-directory: application
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
           check-latest: true
@@ -109,7 +109,7 @@ jobs:
           echo "SBOM contains $(jq '.components | length' "sbom-${{ github.ref_name }}.cdx.json") components"
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sbom
           path: application/sbom-${{ github.ref_name }}.cdx.json
@@ -122,7 +122,7 @@ jobs:
 
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
 

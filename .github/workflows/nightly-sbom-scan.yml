@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # full history — needed to list release tags
 
@@ -38,7 +38,7 @@ jobs:
             git checkout "refs/tags/$TAG"
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: steps.tag.outputs.found == 'true'
         with:
           node-version-file: '.nvmrc'
@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload scan reports
         if: steps.tag.outputs.found == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: grype-report-${{ steps.tag.outputs.tag }}
           path: |
