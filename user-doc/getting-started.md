@@ -13,6 +13,12 @@ Download the latest release from the [Releases](../../../releases) page.
 ### Windows
 Run the installer. No administrator rights required (per-user install by default).
 
+> **"Windows protected your PC"?** MyNote is a small open-source app and isn't
+> signed with a paid code-signing certificate, so Windows SmartScreen shows a
+> blue warning the first time you run the installer. This is expected — click
+> **More info → Run anyway** to continue. (If you'd rather verify first, the
+> installer is built in the open by GitHub Actions from the tagged source.)
+
 ### macOS
 Open the `.dmg` and drag **MyNote** into your Applications folder.
 
@@ -34,6 +40,22 @@ chmod +x MyNote-*.AppImage
 3. MyNote creates a `notebooks.json` manifest in that folder on first use.
 
 Your notes stay entirely in that folder. Back it up any way you like.
+
+---
+
+## Staying up to date
+
+On **Windows** and **Linux**, MyNote checks for new versions automatically each
+time you start it. When a newer release is available it downloads in the
+background and installs the next time you quit and reopen the app — you don't
+need to visit the Releases page again.
+
+> Updates only appear once a version has been *published* on the Releases page.
+> Drafts and pre-releases are invisible to the updater.
+
+On **macOS**, auto-update isn't available (it requires Apple code signing), so
+grab the newest `.dmg` from the [Releases](../../../releases) page when you want
+to update.
 
 ---
 

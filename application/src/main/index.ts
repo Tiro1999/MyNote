@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, clipboard } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
 import * as fs from 'fs'
 
 function createWindow(): void {
@@ -63,6 +64,16 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // Check GitHub Releases for a newer version. electron-updater ignores draft
+  // and pre-release releases, so users only ever get updates you have actually
+  // published. Only runs in the packaged app (no-ops in dev), and a failed
+  // check (offline, rate-limited, no release yet) must never block startup.
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+      console.error('Update check failed:', error)
+    })
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

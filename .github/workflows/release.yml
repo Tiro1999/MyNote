@@ -61,11 +61,18 @@ jobs:
       - name: Build & package
         run: npm run dist
 
+      # Upload the installer plus the electron-updater metadata for this OS:
+      # latest*.yml (the update feed) and *.blockmap (differential downloads).
+      # if-no-files-found:error only trips if the whole set is empty, so the
+      # metadata-less macOS dmg case still passes as long as the installer exists.
       - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.os }}
-          path: ${{ matrix.artifact_glob }}
+          path: |
+            ${{ matrix.artifact_glob }}
+            application/dist/*.blockmap
+            application/dist/latest*.yml
           if-no-files-found: error
 
       - name: Upload runtime versions

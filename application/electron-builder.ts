@@ -9,6 +9,18 @@ const config: Configuration = {
     output: 'dist'
   },
   files: ['out/**'],
+  // GitHub Releases is the update feed. This makes electron-builder emit the
+  // update metadata (latest.yml / latest-linux.yml / latest-mac.yml + blockmaps)
+  // next to the installers so electron-updater can find new versions. Actual
+  // uploading is done by the Release workflow (build runs with --publish never),
+  // so nothing is pushed until you publish the draft release yourself.
+  publish: [
+    {
+      provider: 'github',
+      owner: 'Tiro1999',
+      repo: 'MyNote'
+    }
+  ],
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }]
   },
