@@ -62,14 +62,14 @@ jobs:
         run: npm run dist
 
       - name: Upload installer
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.os }}
           path: ${{ matrix.artifact_glob }}
           if-no-files-found: error
 
       - name: Upload runtime versions
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: runtime-versions-${{ matrix.os }}
           path: application/runtime-versions-${{ matrix.os }}.txt
@@ -109,7 +109,7 @@ jobs:
           echo "SBOM contains $(jq '.components | length' "sbom-${{ github.ref_name }}.cdx.json") components"
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: application/sbom-${{ github.ref_name }}.cdx.json
@@ -122,12 +122,12 @@ jobs:
 
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
       - name: Create GitHub Release (draft)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: MyNote ${{ github.ref_name }}
           draft: true
