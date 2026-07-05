@@ -16,6 +16,13 @@ declare global {
       dialog: {
         openDirectory(): Promise<string | null>
         openFile(filters: Array<{ name: string; extensions: string[] }>): Promise<string | null>
+        saveFile(options: {
+          defaultPath?: string
+          filters?: Array<{ name: string; extensions: string[] }>
+        }): Promise<string | null>
+      }
+      xlsx: {
+        readSheet(filePath: string): Promise<string[][]>
       }
       settings: {
         get(): Promise<{ autoUpdateEnabled: boolean }>
