@@ -3,3 +3,4 @@
 
 # Shell scripts must always use LF — CRLF breaks shebangs on Linux
 *.sh text eol=lf
+
