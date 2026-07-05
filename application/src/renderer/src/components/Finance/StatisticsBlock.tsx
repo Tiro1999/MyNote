@@ -11,6 +11,7 @@ import {
   type DateRange
 } from '../../finance/stats'
 import Donut from './charts/Donut'
+import Pie from './charts/Pie'
 import Bars from './charts/Bars'
 import Line from './charts/Line'
 
@@ -35,7 +36,8 @@ export default function StatisticsBlock({ node, updateAttributes }: NodeViewProp
     categoryFocus: string
     tagFilter: string[]
   }
-  const { ledgers, accounts, loadLedger, loadReferenceData, listLedgers } = useFinanceStore()
+  const { ledgers, accounts, loadLedger, loadReferenceData, listLedgers, deleteLedger } =
+    useFinanceStore()
   const [sources, setSources] = useState<Array<{ id: string; name: string }>>([])
   const [preset, setPreset] = useState<Preset>('month')
 
@@ -69,6 +71,14 @@ export default function StatisticsBlock({ node, updateAttributes }: NodeViewProp
     [ledger]
   )
 
+  const handleDeleteSource = async (): Promise<void> => {
+    if (!attrs.ledgerId) return
+    if (!window.confirm(`Ledger #${attrs.ledgerId} und seine Datendatei endgültig löschen?`)) return
+    await deleteLedger(attrs.ledgerId)
+    updateAttributes({ ledgerId: '' })
+    setSources(await listLedgers())
+  }
+
   return (
     <NodeViewWrapper className="finance-stats" contentEditable={false}>
       <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
@@ -84,6 +94,16 @@ export default function StatisticsBlock({ node, updateAttributes }: NodeViewProp
               </option>
             ))}
           </select>
+          {attrs.ledgerId && (
+            <button
+              type="button"
+              title="Diese Quelle (Ledger-Datei) endgültig löschen"
+              className="text-red-600"
+              onClick={handleDeleteSource}
+            >
+              🗑
+            </button>
+          )}
           <select value={attrs.mode} onChange={(e) => updateAttributes({ mode: e.target.value })}>
             <option value="overall">Gesamt</option>
             <option value="category">Kategorie</option>
@@ -157,6 +177,7 @@ export default function StatisticsBlock({ node, updateAttributes }: NodeViewProp
                 </option>
               ))}
             </select>
+            <Pie data={drill.map((c) => ({ label: c.key, value: c.expenseCents }))} symbol={currency} />
             <Bars data={drill.map((c) => ({ label: c.key, value: c.expenseCents }))} symbol={currency} />
             <table className="w-full text-xs">
               <thead className="text-gray-400">

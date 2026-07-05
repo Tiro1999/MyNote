@@ -25,11 +25,14 @@ const emptyDraft = (): Omit<Entry, 'id' | 'pos'> => ({
 })
 
 const cell = 'px-2 py-0.5 align-middle whitespace-nowrap'
-// field-sizing:content makes each input/select grow to fit its own text, so the
-// auto-layout table sizes every column to its widest value (bounded by min/max).
+// field-sizing:content makes text inputs grow to fit their own text, so the
+// auto-layout table sizes each column to its widest value (bounded by min/max).
 const field = 'bg-transparent [field-sizing:content] min-w-[3.5rem] max-w-[24rem]'
+// Selects don't honour field-sizing reliably; let them take their natural width
+// (as wide as the longest option) so the selected value is never clipped.
+const selectField = 'bg-transparent max-w-[24rem]'
 
-export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
+export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.Element {
   const ledgerId = node.attrs.ledgerId as string
   const {
     ledgers,
@@ -39,7 +42,8 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
     loadReferenceData,
     addEntry,
     updateEntry,
-    deleteEntry
+    deleteEntry,
+    deleteLedger
   } = useFinanceStore()
   const [refOpen, setRefOpen] = useState(false)
   const [draft, setDraft] = useState(emptyDraft())
@@ -73,19 +77,33 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
     setDraft(emptyDraft())
   }
 
+  const handleDeleteLedger = async (): Promise<void> => {
+    if (!window.confirm(`Ledger #${ledgerId} und seine Datendatei endgültig löschen?`)) return
+    await deleteLedger(ledgerId)
+    deleteNode()
+  }
+
   return (
     <NodeViewWrapper className="finance-ledger" contentEditable={false}>
       <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-sm font-semibold">
             {ledger?.meta.name ?? 'Ledger'} <span className="text-gray-400">#{ledgerId}</span>
           </span>
-          <button
-            className="rounded border border-gray-300 px-2 py-1 text-xs text-blue-600 hover:bg-gray-50 dark:border-gray-700 dark:text-blue-400 dark:hover:bg-gray-800"
-            onClick={() => setRefOpen(true)}
-          >
-            Konten/Kategorien verwalten
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="rounded border border-gray-300 px-2 py-1 text-xs text-blue-600 hover:bg-gray-50 dark:border-gray-700 dark:text-blue-400 dark:hover:bg-gray-800"
+              onClick={() => setRefOpen(true)}
+            >
+              Konten/Kategorien verwalten
+            </button>
+            <button
+              className="rounded border border-gray-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-gray-700 dark:hover:bg-red-950"
+              onClick={handleDeleteLedger}
+            >
+              Ledger löschen
+            </button>
+          </div>
         </div>
 
         <div className="max-h-96 overflow-auto">
@@ -118,7 +136,7 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
                   </td>
                   <td className={cell}>
                     <select
-                      className={field}
+                      className={selectField}
                       value={e.type}
                       onChange={(ev) =>
                         updateEntry(ledgerId, { ...e, type: ev.target.value as EntryType })
@@ -137,7 +155,7 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
                   </td>
                   <td className={cell}>
                     <select
-                      className={field}
+                      className={selectField}
                       value={e.accountId}
                       onChange={(ev) => updateEntry(ledgerId, { ...e, accountId: ev.target.value })}
                     >
@@ -151,7 +169,7 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
                   </td>
                   <td className={cell}>
                     <select
-                      className={field}
+                      className={selectField}
                       value={e.categoryPath}
                       onChange={(ev) =>
                         updateEntry(ledgerId, { ...e, categoryPath: ev.target.value })
@@ -218,7 +236,7 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
                 </td>
                 <td className={cell}>
                   <select
-                    className={field}
+                    className={selectField}
                     value={draft.type}
                     onChange={(e) => setDraft({ ...draft, type: e.target.value as EntryType })}
                   >
@@ -236,7 +254,7 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
                 </td>
                 <td className={cell}>
                   <select
-                    className={field}
+                    className={selectField}
                     value={draft.accountId}
                     onChange={(e) => setDraft({ ...draft, accountId: e.target.value })}
                   >
@@ -250,7 +268,7 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
                 </td>
                 <td className={cell}>
                   <select
-                    className={field}
+                    className={selectField}
                     value={draft.categoryPath}
                     onChange={(e) => setDraft({ ...draft, categoryPath: e.target.value })}
                   >
@@ -286,12 +304,16 @@ export default function LedgerBlock({ node }: NodeViewProps): JSX.Element {
                     }
                   />
                 </td>
-                <td className={`${cell} text-center`} colSpan={2}>
+                <td className={cell}></td>
+                <td className={cell}></td>
+              </tr>
+              <tr>
+                <td colSpan={10} className="px-2 pt-2">
                   <button
-                    className="rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
+                    className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
                     onClick={submit}
                   >
-                    + Buchung
+                    + Buchung hinzufügen
                   </button>
                 </td>
               </tr>

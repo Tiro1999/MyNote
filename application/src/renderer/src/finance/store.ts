@@ -36,6 +36,7 @@ interface FinanceState {
   loadReferenceData: () => Promise<void>
   loadLedger: (ledgerId: string) => Promise<void>
   createLedger: (name: string, currencySymbol: string) => Promise<string>
+  deleteLedger: (ledgerId: string) => Promise<void>
   listLedgers: () => Promise<Array<{ id: string; name: string }>>
   addEntry: (ledgerId: string, entry: Omit<Entry, 'id' | 'pos'>) => Promise<void>
   updateEntry: (ledgerId: string, entry: Entry) => Promise<void>
@@ -88,6 +89,16 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await persistLedger(id, state)
     set((s) => ({ ledgers: { ...s.ledgers, [id]: state } }))
     return id
+  },
+
+  deleteLedger: async (ledgerId) => {
+    await window.api.fs.remove(ledgerCsvPath(ledgerId))
+    await window.api.fs.remove(ledgerMetaPath(ledgerId))
+    set((s) => {
+      const next = { ...s.ledgers }
+      delete next[ledgerId]
+      return { ledgers: next }
+    })
   },
 
   listLedgers: async () => {
