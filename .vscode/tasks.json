@@ -17,6 +17,8 @@
       "options": {
         "cwd": "${workspaceFolder}/application"
       },
+      "dependsOn": ["MyNote: Install"],
+      "dependsOrder": "sequence",
       "problemMatcher": []
     },
     {
