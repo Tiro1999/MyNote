@@ -24,7 +24,15 @@ const api = {
     openFile: (
       filters: Array<{ name: string; extensions: string[] }>
     ): Promise<string | null> =>
-      ipcRenderer.invoke('dialog:openFile', filters)
+      ipcRenderer.invoke('dialog:openFile', filters),
+    saveFile: (options: {
+      defaultPath?: string
+      filters?: Array<{ name: string; extensions: string[] }>
+    }): Promise<string | null> => ipcRenderer.invoke('dialog:saveFile', options)
+  },
+  xlsx: {
+    readSheet: (filePath: string): Promise<string[][]> =>
+      ipcRenderer.invoke('xlsx:readSheet', filePath)
   },
   settings: {
     get: (): Promise<{ autoUpdateEnabled: boolean }> =>

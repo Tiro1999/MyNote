@@ -17,7 +17,9 @@ import {
   TocBlock,
   PageHierarchyBlock,
   ExternalLinkGuard,
-  TableWithControls
+  TableWithControls,
+  FinanceLedger,
+  FinanceStats
 } from '../../templates'
 import Toolbar from './Toolbar'
 
@@ -55,6 +57,8 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       TableRow,
       TableHeader,
       TableCell,
+      FinanceLedger,
+      FinanceStats,
       SlashCommand.configure({ context: { kind: activeContentKind, id: activeContentId } })
     ],
     content: element.content as object,

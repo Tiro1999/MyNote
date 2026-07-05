@@ -6,14 +6,16 @@
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run build",
-      "cwd": "${workspaceFolder}/application"
+      "cwd": "${workspaceFolder}/application",
+      "preLaunchTask": "MyNote: Install"
     },
     {
       "name": "MyNote: Run Dev",
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run dev:container",
-      "cwd": "${workspaceFolder}/application"
+      "cwd": "${workspaceFolder}/application",
+      "preLaunchTask": "MyNote: Install"
     },
     {
       "name": "MyNote: Build + Run Dev",

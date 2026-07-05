@@ -3,6 +3,8 @@ import type { CalloutVariant } from './CalloutExtension'
 import { insertTableOfContents } from './TocBlockExtension'
 import { insertPageHierarchy } from './PageHierarchyBlockExtension'
 import { insertTable } from './TableCommand'
+import { insertFinanceLedger } from './FinanceLedgerExtension'
+import { insertFinanceStats } from './StatisticsBlockExtension'
 import type { TemplateCommand } from './types'
 
 /** Extra English/German search keywords per callout variant, in addition to the variant id itself. */
@@ -54,9 +56,30 @@ const STRUCTURE_COMMANDS: TemplateCommand[] = [
   }
 ]
 
+const FINANCE_COMMANDS: TemplateCommand[] = [
+  {
+    id: 'table-usecase',
+    title: 'Finanz-Tabelle (Einnahmen/Ausgaben)',
+    description: 'Fügt einen CSV-gestützten Finanz-Ledger ein',
+    icon: '💶',
+    keywords: ['finance', 'finanzen', 'tableusecase', 'ledger', 'einnahmen', 'ausgaben', 'budget'],
+    action: (editor, range) => {
+      void insertFinanceLedger(editor, range)
+    }
+  },
+  {
+    id: 'statistics-from-table',
+    title: 'Finanz-Statistik',
+    description: 'Wertet einen Finanz-Ledger aus (Gesamt & Kategorie)',
+    icon: '📊',
+    keywords: ['statistics', 'statistik', 'statisticsfromtable', 'auswertung', 'charts', 'finance'],
+    action: (editor, range) => insertFinanceStats(editor, range)
+  }
+]
+
 /** All available `/` slash commands, in menu order. */
 export function getTemplateCommands(): TemplateCommand[] {
-  return [...CALLOUT_COMMANDS, ...STRUCTURE_COMMANDS]
+  return [...CALLOUT_COMMANDS, ...STRUCTURE_COMMANDS, ...FINANCE_COMMANDS]
 }
 
 /** Filters commands by title or keyword against the typed query (case-insensitive substring match). */
