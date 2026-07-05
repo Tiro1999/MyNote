@@ -2,3 +2,4 @@
 .github/*
 !.github/workflows/
 application/local-res
+.claude/local/
