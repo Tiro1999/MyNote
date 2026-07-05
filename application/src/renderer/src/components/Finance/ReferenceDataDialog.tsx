@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { nanoid } from 'nanoid'
 import { useFinanceStore } from '../../finance/store'
 import type { Account, CategoryNode } from '../../finance/model'
@@ -80,7 +81,7 @@ export default function ReferenceDataDialog({ open, onClose }: Props): JSX.Eleme
     onClose()
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
       onClick={onClose}
@@ -161,6 +162,7 @@ export default function ReferenceDataDialog({ open, onClose }: Props): JSX.Eleme
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
