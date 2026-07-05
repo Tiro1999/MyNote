@@ -3,8 +3,10 @@ import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { useFinanceStore } from '../../finance/store'
 import type { CategoryNode, Entry, EntryType } from '../../finance/model'
 import { formatCents } from '../../finance/model'
+import { serializeLedgerCsv } from '../../finance/csv'
 import { computeAccountSaldos } from '../../finance/stats'
 import ReferenceDataDialog from './ReferenceDataDialog'
+import ImportDialog from './ImportDialog'
 
 function flattenCategories(nodes: CategoryNode[], prefix = ''): string[] {
   return nodes.flatMap((n) => {
@@ -46,6 +48,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
     deleteLedger
   } = useFinanceStore()
   const [refOpen, setRefOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [draft, setDraft] = useState(emptyDraft())
 
   useEffect(() => {
@@ -83,6 +86,15 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
     deleteNode()
   }
 
+  const handleExport = async (): Promise<void> => {
+    if (!ledger) return
+    const path = await window.api.dialog.saveFile({
+      defaultPath: `${ledger.meta.name || 'ledger'}-${ledgerId}.csv`,
+      filters: [{ name: 'CSV', extensions: ['csv'] }]
+    })
+    if (path) await window.api.fs.writeFile(path, serializeLedgerCsv(ledger.entries))
+  }
+
   return (
     <NodeViewWrapper className="finance-ledger" contentEditable={false}>
       <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
@@ -91,6 +103,18 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
             {ledger?.meta.name ?? 'Ledger'} <span className="text-gray-400">#{ledgerId}</span>
           </span>
           <div className="flex items-center gap-2">
+            <button
+              className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              onClick={() => setImportOpen(true)}
+            >
+              Import
+            </button>
+            <button
+              className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              onClick={handleExport}
+            >
+              Export
+            </button>
             <button
               className="rounded border border-gray-300 px-2 py-1 text-xs text-blue-600 hover:bg-gray-50 dark:border-gray-700 dark:text-blue-400 dark:hover:bg-gray-800"
               onClick={() => setRefOpen(true)}
@@ -337,6 +361,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
         </div>
       </div>
       <ReferenceDataDialog open={refOpen} onClose={() => setRefOpen(false)} />
+      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} ledgerId={ledgerId} />
     </NodeViewWrapper>
   )
 }

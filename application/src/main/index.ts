@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import * as fs from 'fs'
+import * as zlib from 'zlib'
 
 // ─── App settings ───────────────────────────────────────────────────────────
 // Persisted as JSON in the OS-specific userData directory so the main process
@@ -170,6 +171,125 @@ ipcMain.handle('dialog:openDirectory', async () => {
 ipcMain.handle('dialog:openFile', async (_, filters: Electron.FileFilter[]) => {
   const result = await dialog.showOpenDialog({ properties: ['openFile'], filters })
   return result.canceled ? null : result.filePaths[0]
+})
+
+ipcMain.handle(
+  'dialog:saveFile',
+  async (_, options: { defaultPath?: string; filters?: Electron.FileFilter[] }) => {
+    const result = await dialog.showSaveDialog({
+      defaultPath: options.defaultPath,
+      filters: options.filters
+    })
+    return result.canceled ? null : (result.filePath ?? null)
+  }
+)
+
+// ─── .xlsx reading (dependency-free) ──────────────────────────────────────────
+// An .xlsx is a ZIP of XML parts. We locate and inflate just the two parts we
+// need (shared strings + first worksheet) with Node's built-in zlib, then pull
+// the cell grid out with light XML parsing. Tailored to standard OOXML exports.
+
+function readZipEntry(buf: Buffer, name: string): string | null {
+  const EOCD_SIG = 0x06054b50
+  let eocd = -1
+  for (let i = buf.length - 22; i >= 0; i--) {
+    if (buf.readUInt32LE(i) === EOCD_SIG) {
+      eocd = i
+      break
+    }
+  }
+  if (eocd < 0) return null
+  const count = buf.readUInt16LE(eocd + 10)
+  let off = buf.readUInt32LE(eocd + 16)
+  for (let n = 0; n < count; n++) {
+    if (buf.readUInt32LE(off) !== 0x02014b50) break
+    const method = buf.readUInt16LE(off + 10)
+    const compSize = buf.readUInt32LE(off + 20)
+    const nameLen = buf.readUInt16LE(off + 28)
+    const extraLen = buf.readUInt16LE(off + 30)
+    const commentLen = buf.readUInt16LE(off + 32)
+    const localOff = buf.readUInt32LE(off + 42)
+    const fname = buf.toString('utf8', off + 46, off + 46 + nameLen)
+    if (fname === name) {
+      const lNameLen = buf.readUInt16LE(localOff + 26)
+      const lExtraLen = buf.readUInt16LE(localOff + 28)
+      const start = localOff + 30 + lNameLen + lExtraLen
+      const data = buf.subarray(start, start + compSize)
+      if (method === 0) return data.toString('utf8')
+      if (method === 8) return zlib.inflateRawSync(data).toString('utf8')
+      return null
+    }
+    off += 46 + nameLen + extraLen + commentLen
+  }
+  return null
+}
+
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&amp;/g, '&')
+}
+
+function parseSharedStrings(xml: string): string[] {
+  const out: string[] = []
+  const siRe = /<si\b[^>]*>([\s\S]*?)<\/si>/g
+  let m: RegExpExecArray | null
+  while ((m = siRe.exec(xml)) !== null) {
+    let text = ''
+    const tRe = /<t\b[^>]*>([\s\S]*?)<\/t>/g
+    let tm: RegExpExecArray | null
+    while ((tm = tRe.exec(m[1])) !== null) text += tm[1]
+    out.push(decodeXmlEntities(text))
+  }
+  return out
+}
+
+function columnIndex(ref: string): number {
+  const letters = /^[A-Z]+/.exec(ref)?.[0] ?? 'A'
+  let n = 0
+  for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64)
+  return n
+}
+
+function parseSheet(xml: string, shared: string[]): string[][] {
+  const rows: string[][] = []
+  const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/g
+  let rm: RegExpExecArray | null
+  while ((rm = rowRe.exec(xml)) !== null) {
+    const cells: string[] = []
+    const cRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g
+    let cm: RegExpExecArray | null
+    while ((cm = cRe.exec(rm[1])) !== null) {
+      const attrs = cm[1] ?? ''
+      const body = cm[2] ?? ''
+      const col = columnIndex(/r="([A-Z]+\d+)"/.exec(attrs)?.[1] ?? '')
+      const idx = col > 0 ? col - 1 : cells.length
+      let value = ''
+      if (/t="inlineStr"/.test(attrs)) {
+        value = decodeXmlEntities(/<t\b[^>]*>([\s\S]*?)<\/t>/.exec(body)?.[1] ?? '')
+      } else {
+        const v = /<v>([\s\S]*?)<\/v>/.exec(body)?.[1]
+        if (v !== undefined) {
+          value = /t="s"/.test(attrs) ? (shared[Number(v)] ?? '') : decodeXmlEntities(v)
+        }
+      }
+      cells[idx] = value
+    }
+    for (let i = 0; i < cells.length; i++) if (cells[i] === undefined) cells[i] = ''
+    rows.push(cells)
+  }
+  return rows
+}
+
+ipcMain.handle('xlsx:readSheet', async (_, filePath: string): Promise<string[][]> => {
+  const buf = await fs.promises.readFile(filePath)
+  const shared = parseSharedStrings(readZipEntry(buf, 'xl/sharedStrings.xml') ?? '')
+  return parseSheet(readZipEntry(buf, 'xl/worksheets/sheet1.xml') ?? '', shared)
 })
 
 // ─── Settings IPC ───────────────────────────────────────────────────────────

@@ -39,8 +39,11 @@ interface FinanceState {
   deleteLedger: (ledgerId: string) => Promise<void>
   listLedgers: () => Promise<Array<{ id: string; name: string }>>
   addEntry: (ledgerId: string, entry: Omit<Entry, 'id' | 'pos'>) => Promise<void>
+  importEntries: (ledgerId: string, entries: Omit<Entry, 'id' | 'pos'>[]) => Promise<void>
   updateEntry: (ledgerId: string, entry: Entry) => Promise<void>
   deleteEntry: (ledgerId: string, entryId: string) => Promise<void>
+  ensureAccounts: (names: string[]) => Promise<Record<string, string>>
+  ensureCategories: (paths: string[]) => Promise<void>
   saveAccounts: (accounts: Account[]) => Promise<void>
   saveCategories: (categories: CategoryNode[]) => Promise<void>
 }
@@ -125,6 +128,60 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }
     set((s) => ({ ledgers: { ...s.ledgers, [ledgerId]: next } }))
     await persistLedger(ledgerId, next)
+  },
+
+  importEntries: async (ledgerId, entries) => {
+    const ledger = get().ledgers[ledgerId]
+    if (!ledger) return
+    let pos = ledger.entries.reduce((max, e) => Math.max(max, e.pos), 0)
+    const added = entries.map((e) => ({ ...e, id: nanoid(), pos: ++pos }))
+    const next: LedgerState = { ...ledger, entries: [...ledger.entries, ...added] }
+    set((s) => ({ ledgers: { ...s.ledgers, [ledgerId]: next } }))
+    await persistLedger(ledgerId, next)
+  },
+
+  ensureAccounts: async (names) => {
+    const existing = get().accounts
+    const map: Record<string, string> = {}
+    for (const acc of existing) map[acc.name] = acc.id
+    const toAdd: Account[] = []
+    for (const name of names) {
+      if (map[name]) continue
+      const id = nanoid(6)
+      map[name] = id
+      toAdd.push({ id, name, openingBalance: '0' })
+    }
+    if (toAdd.length > 0) {
+      const nextAccounts = [...existing, ...toAdd]
+      set({ accounts: nextAccounts })
+      await window.api.fs.mkdir(join(root(), FINANCE_DIR))
+      await window.api.fs.writeFile(
+        join(root(), FINANCE_DIR, 'accounts.json'),
+        JSON.stringify(nextAccounts, null, 2)
+      )
+    }
+    return map
+  },
+
+  ensureCategories: async (paths) => {
+    const tree: CategoryNode[] = structuredClone(get().categories)
+    for (const path of paths) {
+      let level = tree
+      for (const seg of path.split('/')) {
+        let child = level.find((n) => n.name === seg)
+        if (!child) {
+          child = { name: seg, children: [] }
+          level.push(child)
+        }
+        level = child.children
+      }
+    }
+    set({ categories: tree })
+    await window.api.fs.mkdir(join(root(), FINANCE_DIR))
+    await window.api.fs.writeFile(
+      join(root(), FINANCE_DIR, 'categories.json'),
+      JSON.stringify(tree, null, 2)
+    )
   },
 
   updateEntry: async (ledgerId, entry) => {
