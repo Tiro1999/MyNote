@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import type { Account, CategoryNode, Entry, LedgerMeta } from './model'
+import type { ColumnConfig } from '../lib/columnConfig'
 import { parseLedgerCsv, serializeLedgerCsv } from './csv'
 import { useNotebookStore } from '../store/notebookStore'
 
@@ -37,6 +38,7 @@ interface FinanceState {
   loadLedger: (ledgerId: string) => Promise<void>
   createLedger: (name: string, currencySymbol: string) => Promise<string>
   deleteLedger: (ledgerId: string) => Promise<void>
+  saveLedgerColumns: (ledgerId: string, columns: Record<string, ColumnConfig>) => Promise<void>
   listLedgers: () => Promise<Array<{ id: string; name: string }>>
   addEntry: (ledgerId: string, entry: Omit<Entry, 'id' | 'pos'>) => Promise<void>
   importEntries: (ledgerId: string, entries: Omit<Entry, 'id' | 'pos'>[]) => Promise<void>
@@ -126,6 +128,14 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       ...ledger,
       entries: [...ledger.entries, { ...entry, id: nanoid(), pos }]
     }
+    set((s) => ({ ledgers: { ...s.ledgers, [ledgerId]: next } }))
+    await persistLedger(ledgerId, next)
+  },
+
+  saveLedgerColumns: async (ledgerId, columns) => {
+    const ledger = get().ledgers[ledgerId]
+    if (!ledger) return
+    const next: LedgerState = { ...ledger, meta: { ...ledger.meta, columns } }
     set((s) => ({ ledgers: { ...s.ledgers, [ledgerId]: next } }))
     await persistLedger(ledgerId, next)
   },

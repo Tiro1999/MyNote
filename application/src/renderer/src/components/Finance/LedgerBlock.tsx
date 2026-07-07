@@ -5,8 +5,11 @@ import type { CategoryNode, Entry, EntryType } from '../../finance/model'
 import { formatCents } from '../../finance/model'
 import { serializeLedgerCsv } from '../../finance/csv'
 import { computeAccountSaldos } from '../../finance/stats'
+import type { Align, ColumnConfig } from '../../lib/columnConfig'
+import { applyColumnFormat } from '../../lib/format'
 import ReferenceDataDialog from './ReferenceDataDialog'
 import ImportDialog from './ImportDialog'
+import ColumnConfigPopover from '../Common/ColumnConfigPopover'
 
 function flattenCategories(nodes: CategoryNode[], prefix = ''): string[] {
   return nodes.flatMap((n) => {
@@ -27,12 +30,54 @@ const emptyDraft = (): Omit<Entry, 'id' | 'pos'> => ({
 })
 
 const cell = 'px-2 py-0.5 align-middle whitespace-nowrap'
-// field-sizing:content makes text inputs grow to fit their own text, so the
-// auto-layout table sizes each column to its widest value (bounded by min/max).
 const field = 'bg-transparent [field-sizing:content] min-w-[3.5rem] max-w-[24rem]'
-// Selects don't honour field-sizing reliably; let them take their natural width
-// (as wide as the longest option) so the selected value is never clipped.
 const selectField = 'bg-transparent max-w-[24rem]'
+
+// Configurable columns (the '#', link and delete columns stay structural).
+const LEDGER_COLUMNS: { id: string; label: string }[] = [
+  { id: 'date', label: 'Datum' },
+  { id: 'type', label: 'Typ' },
+  { id: 'amount', label: 'Betrag' },
+  { id: 'account', label: 'Konto' },
+  { id: 'category', label: 'Kategorie' },
+  { id: 'topic', label: 'Topic' },
+  { id: 'tags', label: 'Tags' }
+]
+
+const alignClass = (a: Align | undefined): string =>
+  a === 'center' ? 'text-center' : a === 'right' ? 'text-right' : 'text-left'
+
+// Displays the column-formatted value when not focused, and the raw editable
+// text while focused — non-destructive display formatting.
+function FormattedInput({
+  value,
+  col,
+  className,
+  onCommit
+}: {
+  value: string
+  col: ColumnConfig
+  className: string
+  onCommit: (raw: string) => void
+}): JSX.Element {
+  const [focused, setFocused] = useState(false)
+  const [draft, setDraft] = useState(value)
+  return (
+    <input
+      className={className}
+      value={focused ? draft : applyColumnFormat(value, col)}
+      onFocus={() => {
+        setDraft(value)
+        setFocused(true)
+      }}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        setFocused(false)
+        if (draft !== value) onCommit(draft)
+      }}
+    />
+  )
+}
 
 export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.Element {
   const ledgerId = node.attrs.ledgerId as string
@@ -45,10 +90,12 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
     addEntry,
     updateEntry,
     deleteEntry,
-    deleteLedger
+    deleteLedger,
+    saveLedgerColumns
   } = useFinanceStore()
   const [refOpen, setRefOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [configCol, setConfigCol] = useState<string | null>(null)
   const [draft, setDraft] = useState(emptyDraft())
 
   useEffect(() => {
@@ -59,6 +106,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
   const ledger = ledgers[ledgerId]
   const categoryPaths = useMemo(() => flattenCategories(categories), [categories])
   const currency = ledger?.meta.currencySymbol ?? '€'
+  const columns = ledger?.meta.columns ?? {}
   const saldos = useMemo(
     () => (ledger ? computeAccountSaldos(ledger.entries, accounts) : []),
     [ledger, accounts]
@@ -66,6 +114,59 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
 
   const accountName = (id: string): string =>
     accounts.find((a) => a.id === id)?.name ?? '(gelöschtes Konto)'
+
+  // Only the amount column carries a real display type (number); the rest are
+  // alignment/width only (the native date picker keeps its own display).
+  const colConfig = (id: string): ColumnConfig => {
+    const base = columns[id] ?? {}
+    if (id === 'amount') {
+      return {
+        ...base,
+        type: 'number',
+        number: base.number ?? {
+          decimals: 2,
+          thousands: true,
+          currencySymbol: currency,
+          symbolPosition: 'after'
+        }
+      }
+    }
+    return { ...base, type: 'text' }
+  }
+  const updateColConfig = (id: string, next: ColumnConfig): void => {
+    saveLedgerColumns(ledgerId, { ...columns, [id]: next })
+  }
+  const startResize = (id: string, startX: number, startWidth: number): void => {
+    const move = (ev: MouseEvent): void => {
+      const width = Math.max(48, startWidth + (ev.clientX - startX))
+      saveLedgerColumns(ledgerId, { ...columns, [id]: { ...(columns[id] ?? {}), width } })
+    }
+    const up = (): void => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
+  const renderHeader = (id: string, label: string): JSX.Element => (
+    <th
+      key={id}
+      className={`${cell} relative ${alignClass(columns[id]?.align)}`}
+      style={columns[id]?.width ? { width: columns[id]?.width } : undefined}
+    >
+      <button className="hover:underline" onClick={() => setConfigCol(id)} title="Spalte konfigurieren">
+        {label} ▾
+      </button>
+      <span
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none"
+        onMouseDown={(e) => {
+          e.preventDefault()
+          startResize(id, e.clientX, (e.currentTarget.parentElement as HTMLElement).offsetWidth)
+        }}
+      />
+    </th>
+  )
 
   const pickInvoice = async (apply: (path: string) => void): Promise<void> => {
     const path = await window.api.dialog.openFile([
@@ -135,13 +236,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
             <thead className="text-gray-400">
               <tr className="border-b border-gray-200 dark:border-gray-800">
                 <th className={`${cell} w-8 text-left`}>#</th>
-                <th className={`${cell} text-left`}>Datum</th>
-                <th className={`${cell} text-left`}>Typ</th>
-                <th className={`${cell} text-right`}>Betrag</th>
-                <th className={`${cell} text-left`}>Konto</th>
-                <th className={`${cell} text-left`}>Kategorie</th>
-                <th className={`${cell} text-left`}>Topic</th>
-                <th className={`${cell} text-left`}>Tags</th>
+                {LEDGER_COLUMNS.map((c) => renderHeader(c.id, c.label))}
                 <th className={`${cell} w-6`}></th>
                 <th className={`${cell} w-6`}></th>
               </tr>
@@ -150,7 +245,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
               {[...(ledger?.entries ?? [])].reverse().map((e) => (
                 <tr key={e.id} className="border-b border-gray-100 dark:border-gray-800">
                   <td className={cell}>{e.pos}</td>
-                  <td className={cell}>
+                  <td className={`${cell} ${alignClass(columns['date']?.align)}`}>
                     <input
                       className={field}
                       type="date"
@@ -158,7 +253,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
                       onChange={(ev) => updateEntry(ledgerId, { ...e, date: ev.target.value })}
                     />
                   </td>
-                  <td className={cell}>
+                  <td className={`${cell} ${alignClass(columns['type']?.align)}`}>
                     <select
                       className={selectField}
                       value={e.type}
@@ -170,14 +265,15 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
                       <option value="income">Einnahme</option>
                     </select>
                   </td>
-                  <td className={`${cell} text-right`}>
-                    <input
-                      className={`${field} text-right`}
+                  <td className={`${cell} ${alignClass(columns['amount']?.align ?? 'right')}`}>
+                    <FormattedInput
+                      className={`${field} ${columns['amount']?.align === 'left' ? '' : 'text-right'}`}
                       value={e.amount}
-                      onChange={(ev) => updateEntry(ledgerId, { ...e, amount: ev.target.value })}
+                      col={colConfig('amount')}
+                      onCommit={(raw) => updateEntry(ledgerId, { ...e, amount: raw })}
                     />
                   </td>
-                  <td className={cell}>
+                  <td className={`${cell} ${alignClass(columns['account']?.align)}`}>
                     <select
                       className={selectField}
                       value={e.accountId}
@@ -191,7 +287,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
                       ))}
                     </select>
                   </td>
-                  <td className={cell}>
+                  <td className={`${cell} ${alignClass(columns['category']?.align)}`}>
                     <select
                       className={selectField}
                       value={e.categoryPath}
@@ -207,14 +303,14 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
                       ))}
                     </select>
                   </td>
-                  <td className={cell}>
+                  <td className={`${cell} ${alignClass(columns['topic']?.align)}`}>
                     <input
                       className={field}
                       value={e.topic}
                       onChange={(ev) => updateEntry(ledgerId, { ...e, topic: ev.target.value })}
                     />
                   </td>
-                  <td className={cell}>
+                  <td className={`${cell} ${alignClass(columns['tags']?.align)}`}>
                     <input
                       className={field}
                       value={e.tags.join(',')}
@@ -362,6 +458,19 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
       </div>
       <ReferenceDataDialog open={refOpen} onClose={() => setRefOpen(false)} />
       <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} ledgerId={ledgerId} />
+      {configCol && (
+        <ColumnConfigPopover
+          open={true}
+          title={LEDGER_COLUMNS.find((c) => c.id === configCol)?.label ?? configCol}
+          value={colConfig(configCol)}
+          allowType={false}
+          onChange={(next) => updateColConfig(configCol, next)}
+          onResetWidth={() =>
+            updateColConfig(configCol, { ...colConfig(configCol), width: undefined })
+          }
+          onClose={() => setConfigCol(null)}
+        />
+      )}
     </NodeViewWrapper>
   )
 }
