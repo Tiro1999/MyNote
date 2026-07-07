@@ -33,6 +33,11 @@ const cell = 'px-2 py-0.5 align-middle whitespace-nowrap'
 const field = 'bg-transparent [field-sizing:content] min-w-[3.5rem] max-w-[24rem]'
 const selectField = 'bg-transparent max-w-[24rem]'
 
+// Above this many rows the grid paginates so it never renders thousands of
+// input controls at once (the real cost — the CSV backend scales fine).
+const PAGE_SIZE = 50
+const PAGINATE_THRESHOLD = 100
+
 // Configurable columns (the '#', link and delete columns stay structural).
 const LEDGER_COLUMNS: { id: string; label: string }[] = [
   { id: 'date', label: 'Datum' },
@@ -96,6 +101,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
   const [refOpen, setRefOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [configCol, setConfigCol] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
   const [draft, setDraft] = useState(emptyDraft())
 
   useEffect(() => {
@@ -107,6 +113,13 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
   const categoryPaths = useMemo(() => flattenCategories(categories), [categories])
   const currency = ledger?.meta.currencySymbol ?? '€'
   const columns = ledger?.meta.columns ?? {}
+  const allRows = useMemo(() => [...(ledger?.entries ?? [])].reverse(), [ledger])
+  const paginated = allRows.length > PAGINATE_THRESHOLD
+  const pageCount = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const visibleRows = paginated
+    ? allRows.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
+    : allRows
   const saldos = useMemo(
     () => (ledger ? computeAccountSaldos(ledger.entries, accounts) : []),
     [ledger, accounts]
@@ -231,6 +244,42 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
           </div>
         </div>
 
+        {paginated && (
+          <div className="mb-1 flex items-center justify-end gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <button
+              className="disabled:opacity-40"
+              disabled={safePage === 0}
+              onClick={() => setPage(0)}
+            >
+              «
+            </button>
+            <button
+              className="disabled:opacity-40"
+              disabled={safePage === 0}
+              onClick={() => setPage(safePage - 1)}
+            >
+              ‹
+            </button>
+            <span className="tabular-nums">
+              Seite {safePage + 1}/{pageCount} · {allRows.length} Zeilen
+            </span>
+            <button
+              className="disabled:opacity-40"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPage(safePage + 1)}
+            >
+              ›
+            </button>
+            <button
+              className="disabled:opacity-40"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPage(pageCount - 1)}
+            >
+              »
+            </button>
+          </div>
+        )}
+
         <div className="max-h-96 overflow-auto">
           <table className="w-full table-auto border-collapse text-xs">
             <thead className="text-gray-400">
@@ -242,7 +291,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
               </tr>
             </thead>
             <tbody>
-              {[...(ledger?.entries ?? [])].reverse().map((e) => (
+              {visibleRows.map((e) => (
                 <tr key={e.id} className="border-b border-gray-100 dark:border-gray-800">
                   <td className={cell}>{e.pos}</td>
                   <td className={`${cell} ${alignClass(columns['date']?.align)}`}>
