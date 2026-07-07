@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import { nanoid } from 'nanoid'
 import { useNotebookStore } from '../../store/notebookStore'
 import TextBox from './TextBox'
+import Minimap from './Minimap'
 import type { TextBoxElement } from '../../types'
 
 const MIN_ZOOM = 0.2
@@ -88,6 +89,17 @@ export default function CanvasView(): JSX.Element {
       )
     : elements
 
+  // The actual visible canvas rectangle (no cull buffer) for the minimap.
+  const viewRect = {
+    left: -pan.x / zoom,
+    top: -pan.y / zoom,
+    right: (viewportSize.w - pan.x) / zoom,
+    bottom: (viewportSize.h - pan.y) / zoom
+  }
+  const navigateTo = (cx: number, cy: number): void => {
+    setPan({ x: viewportSize.w / 2 - cx * zoom, y: viewportSize.h / 2 - cy * zoom })
+  }
+
   // Double-click on the background → create a new text box at cursor position
   const handleDoubleClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-canvas-element]')) return
@@ -143,30 +155,45 @@ export default function CanvasView(): JSX.Element {
         })}
       </div>
 
-      {/* Zoom / pan HUD */}
-      <div className="absolute bottom-3 right-4 flex items-center gap-1 text-xs text-gray-500 select-none dark:text-gray-300">
-        <button
-          className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-          onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}
-        >
-          −
-        </button>
-        <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-        <button
-          className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-          onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}
-        >
-          +
-        </button>
-        <button
-          className="ml-1 rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-          onClick={() => {
-            setZoom(1)
-            setPan({ x: 40, y: 40 })
-          }}
-        >
-          Reset
-        </button>
+      {/* Bottom-right: overview minimap + zoom/pan HUD */}
+      <div className="absolute bottom-3 right-4 flex flex-col items-end gap-2 select-none">
+        {elements.length > 0 && viewportSize.w > 0 && (
+          <Minimap
+            elements={elements.map((el) => ({
+              id: el.id,
+              x: el.x,
+              y: el.y,
+              width: el.width,
+              height: el.height
+            }))}
+            viewport={viewRect}
+            onNavigate={navigateTo}
+          />
+        )}
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-300">
+          <button
+            className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}
+          >
+            −
+          </button>
+          <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+          <button
+            className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}
+          >
+            +
+          </button>
+          <button
+            className="ml-1 rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => {
+              setZoom(1)
+              setPan({ x: 40, y: 40 })
+            }}
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
       {/* Empty-page hint */}
