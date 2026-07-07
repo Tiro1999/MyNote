@@ -13,6 +13,7 @@ export default function CanvasView(): JSX.Element {
 
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 40, y: 40 })
+  const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 })
   const isPanning = useRef(false)
   const lastMouse = useRef({ x: 0, y: 0 })
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -34,6 +35,17 @@ export default function CanvasView(): JSX.Element {
     return () => el.removeEventListener('wheel', handleWheel)
   }, [handleWheel])
 
+  // Track the viewport size so we can render only the elements currently in view.
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el) return
+    const measure = (): void => setViewportSize({ w: el.clientWidth, h: el.clientHeight })
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const handleMouseDown = (e: React.MouseEvent) => {
     // Middle-click or Alt+Left-click → pan
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -54,6 +66,27 @@ export default function CanvasView(): JSX.Element {
   const handleMouseUp = () => {
     isPanning.current = false
   }
+
+  // Viewport culling: render only elements whose box intersects the visible
+  // canvas rectangle (plus half a screen of buffer so panning never pops in).
+  // Before the size is measured, render everything to avoid a blank first paint.
+  const elements = pageContent?.elements ?? []
+  const culling = viewportSize.w > 0 && viewportSize.h > 0
+  const marginX = (viewportSize.w / zoom) * 0.5
+  const marginY = (viewportSize.h / zoom) * 0.5
+  const viewLeft = -pan.x / zoom - marginX
+  const viewTop = -pan.y / zoom - marginY
+  const viewRight = (viewportSize.w - pan.x) / zoom + marginX
+  const viewBottom = (viewportSize.h - pan.y) / zoom + marginY
+  const visibleElements = culling
+    ? elements.filter(
+        (el) =>
+          el.x < viewRight &&
+          el.x + el.width > viewLeft &&
+          el.y < viewBottom &&
+          el.y + el.height > viewTop
+      )
+    : elements
 
   // Double-click on the background → create a new text box at cursor position
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -89,7 +122,7 @@ export default function CanvasView(): JSX.Element {
         className="absolute origin-top-left"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
       >
-        {pageContent?.elements.map((el) => {
+        {visibleElements.map((el) => {
           if (el.type === 'textbox') {
             return (
               <TextBox
