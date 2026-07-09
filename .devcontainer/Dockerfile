@@ -1,13 +1,13 @@
 # ── Version pins — change here, takes effect everywhere ──────────────────────
 ARG NODE_VERSION=26
-ARG NPM_VERSION=11
+ARG NPM_VERSION=12
 
 # mcr.microsoft.com/devcontainers/javascript-node only ships up to Node 24.
 # Use the official Docker Hub image instead; it already provides a "node" user.
 FROM node:${NODE_VERSION}-bookworm
 
 # Re-declare so the value is available after FROM
-ARG NPM_VERSION=11
+ARG NPM_VERSION=12
 
 # Replicate devcontainer conveniences: sudo access for the "node" user + git
 RUN apt-get update && apt-get install -y --no-install-recommends \
