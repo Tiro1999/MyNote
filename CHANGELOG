@@ -2,6 +2,19 @@
 # Version Changelog
 
 
+------------------------------------------------------------------------------------------
+v0.1.1
+
+- date: 09.07.2026
+- [Release](https://github.com/Tiro1999/MyNote/releases#release-untagged-fbf845e7daa348e86ef8)
+- add finance planning tools by backslash command template
+- add finance statistics on backslash command
+- add table interactive user adjustments
+- add table finance ledger template with ledger id for reference in statistics
+- add financial import/export data functionality 
+- add [Money Manager App](https://www.realbyteapps.com/) 
+- fixed render issues/freezes on larger data imports from Money Manager Data 
+
 -------------------------------------------------------------------------------------------
 v0.1.0
 
