@@ -1,3 +1,5 @@
+import type { ColumnConfig } from '../lib/columnConfig'
+
 export interface Account {
   id: string
   name: string
@@ -31,6 +33,7 @@ export interface Entry {
 export interface LedgerMeta {
   name: string
   currencySymbol: string
+  columns?: Record<string, ColumnConfig>
 }
 
 /**

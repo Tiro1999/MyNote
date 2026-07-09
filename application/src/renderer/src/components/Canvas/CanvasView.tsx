@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import { nanoid } from 'nanoid'
 import { useNotebookStore } from '../../store/notebookStore'
 import TextBox from './TextBox'
+import Minimap from './Minimap'
 import type { TextBoxElement } from '../../types'
 
 const MIN_ZOOM = 0.2
@@ -13,6 +14,7 @@ export default function CanvasView(): JSX.Element {
 
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 40, y: 40 })
+  const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 })
   const isPanning = useRef(false)
   const lastMouse = useRef({ x: 0, y: 0 })
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -34,6 +36,17 @@ export default function CanvasView(): JSX.Element {
     return () => el.removeEventListener('wheel', handleWheel)
   }, [handleWheel])
 
+  // Track the viewport size so we can render only the elements currently in view.
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el) return
+    const measure = (): void => setViewportSize({ w: el.clientWidth, h: el.clientHeight })
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const handleMouseDown = (e: React.MouseEvent) => {
     // Middle-click or Alt+Left-click → pan
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -53,6 +66,38 @@ export default function CanvasView(): JSX.Element {
 
   const handleMouseUp = () => {
     isPanning.current = false
+  }
+
+  // Viewport culling: render only elements whose box intersects the visible
+  // canvas rectangle (plus half a screen of buffer so panning never pops in).
+  // Before the size is measured, render everything to avoid a blank first paint.
+  const elements = pageContent?.elements ?? []
+  const culling = viewportSize.w > 0 && viewportSize.h > 0
+  const marginX = (viewportSize.w / zoom) * 0.5
+  const marginY = (viewportSize.h / zoom) * 0.5
+  const viewLeft = -pan.x / zoom - marginX
+  const viewTop = -pan.y / zoom - marginY
+  const viewRight = (viewportSize.w - pan.x) / zoom + marginX
+  const viewBottom = (viewportSize.h - pan.y) / zoom + marginY
+  const visibleElements = culling
+    ? elements.filter(
+        (el) =>
+          el.x < viewRight &&
+          el.x + el.width > viewLeft &&
+          el.y < viewBottom &&
+          el.y + el.height > viewTop
+      )
+    : elements
+
+  // The actual visible canvas rectangle (no cull buffer) for the minimap.
+  const viewRect = {
+    left: -pan.x / zoom,
+    top: -pan.y / zoom,
+    right: (viewportSize.w - pan.x) / zoom,
+    bottom: (viewportSize.h - pan.y) / zoom
+  }
+  const navigateTo = (cx: number, cy: number): void => {
+    setPan({ x: viewportSize.w / 2 - cx * zoom, y: viewportSize.h / 2 - cy * zoom })
   }
 
   // Double-click on the background → create a new text box at cursor position
@@ -89,7 +134,7 @@ export default function CanvasView(): JSX.Element {
         className="absolute origin-top-left"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
       >
-        {pageContent?.elements.map((el) => {
+        {visibleElements.map((el) => {
           if (el.type === 'textbox') {
             return (
               <TextBox
@@ -110,30 +155,45 @@ export default function CanvasView(): JSX.Element {
         })}
       </div>
 
-      {/* Zoom / pan HUD */}
-      <div className="absolute bottom-3 right-4 flex items-center gap-1 text-xs text-gray-500 select-none dark:text-gray-300">
-        <button
-          className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-          onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}
-        >
-          −
-        </button>
-        <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-        <button
-          className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-          onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}
-        >
-          +
-        </button>
-        <button
-          className="ml-1 rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-          onClick={() => {
-            setZoom(1)
-            setPan({ x: 40, y: 40 })
-          }}
-        >
-          Reset
-        </button>
+      {/* Bottom-right: overview minimap + zoom/pan HUD */}
+      <div className="absolute bottom-3 right-4 flex flex-col items-end gap-2 select-none">
+        {elements.length > 0 && viewportSize.w > 0 && (
+          <Minimap
+            elements={elements.map((el) => ({
+              id: el.id,
+              x: el.x,
+              y: el.y,
+              width: el.width,
+              height: el.height
+            }))}
+            viewport={viewRect}
+            onNavigate={navigateTo}
+          />
+        )}
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-300">
+          <button
+            className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}
+          >
+            −
+          </button>
+          <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+          <button
+            className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}
+          >
+            +
+          </button>
+          <button
+            className="ml-1 rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => {
+              setZoom(1)
+              setPan({ x: 40, y: 40 })
+            }}
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
       {/* Empty-page hint */}
