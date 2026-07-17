@@ -1,7 +1,9 @@
 name: Nightly SBOM Scan
 
 # Scans the SBOM of the most recent release tag for known vulnerabilities
-# every night. Findings are written to the job summary and reported in a
+# every night, cross-checking three independent data sources (Grype, OSV.dev
+# via osv-scanner, Trivy) plus npm audit against the GitHub Advisory
+# Database. Findings are written to the job summary and reported in a
 # GitHub issue; the run fails when vulnerabilities are found so the signal
 # is visible in the Actions overview.
 
@@ -71,27 +73,121 @@ jobs:
           curl -sSfL https://get.anchore.io/grype | sh -s -- -b "$HOME/.local/bin"
           "$HOME/.local/bin/grype" version
 
-      - name: Scan SBOM
-        id: scan
+      - name: Install OSV-Scanner
+        if: steps.tag.outputs.found == 'true'
+        run: |
+          VERSION=$(curl -sSf https://api.github.com/repos/google/osv-scanner/releases/latest | jq -r .tag_name)
+          curl -sSfL -o "$HOME/.local/bin/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/${VERSION}/osv-scanner_linux_amd64"
+          chmod +x "$HOME/.local/bin/osv-scanner"
+          "$HOME/.local/bin/osv-scanner" --version
+
+      - name: Install Trivy
+        if: steps.tag.outputs.found == 'true'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$HOME/.local/bin"
+          "$HOME/.local/bin/trivy" version
+
+      # Each tool draws from a different upstream vulnerability feed (Grype:
+      # NVD + vendor feeds, OSV-Scanner: OSV.dev/GHSA, Trivy: NVD + Red Hat +
+      # Debian + GHSA, npm audit: GitHub Advisory Database), so running all
+      # four catches advisories that any single source might be missing.
+
+      - name: Scan SBOM with Grype
+        id: grype
         if: steps.tag.outputs.found == 'true'
         run: |
           GRYPE="$HOME/.local/bin/grype"
-          "$GRYPE" sbom:sbom.cdx.json -o table  | tee grype-report.txt
+          "$GRYPE" sbom:sbom.cdx.json -o table | tee grype-report.txt
           "$GRYPE" sbom:sbom.cdx.json -o json > grype-report.json
           COUNT=$(jq '.matches | length' grype-report.json)
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
 
+      - name: Scan SBOM with OSV-Scanner
+        id: osv
+        if: steps.tag.outputs.found == 'true'
+        run: |
+          OSV="$HOME/.local/bin/osv-scanner"
+          "$OSV" --sbom=sbom.cdx.json --format table 2>&1 | tee osv-report.txt || true
+          "$OSV" --sbom=sbom.cdx.json --format json --output osv-report.json || true
+          COUNT=$(jq '[.results[]?.packages[]?.vulnerabilities[]?] | length' osv-report.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Scan SBOM with Trivy
+        id: trivy
+        if: steps.tag.outputs.found == 'true'
+        run: |
+          TRIVY="$HOME/.local/bin/trivy"
+          "$TRIVY" sbom sbom.cdx.json --format table --exit-code 0 | tee trivy-report.txt
+          "$TRIVY" sbom sbom.cdx.json --format json --exit-code 0 --output trivy-report.json
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-report.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Scan package-lock.json with npm audit
+        id: npm-audit
+        if: steps.tag.outputs.found == 'true'
+        run: |
+          cd application
+          npm audit --package-lock-only | tee ../npm-audit-report.txt || true
+          npm audit --package-lock-only --json > ../npm-audit-report.json || true
+          cd ..
+          COUNT=$(jq '.metadata.vulnerabilities.total' npm-audit-report.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Combine results
+        id: scan
+        if: steps.tag.outputs.found == 'true'
+        env:
+          GRYPE_COUNT: ${{ steps.grype.outputs.count }}
+          OSV_COUNT: ${{ steps.osv.outputs.count }}
+          TRIVY_COUNT: ${{ steps.trivy.outputs.count }}
+          NPM_AUDIT_COUNT: ${{ steps.npm-audit.outputs.count }}
+        run: |
+          TOTAL=$((GRYPE_COUNT + OSV_COUNT + TRIVY_COUNT + NPM_AUDIT_COUNT))
+          echo "count=$TOTAL" >> "$GITHUB_OUTPUT"
+
           {
             echo "## Nightly SBOM scan — ${{ steps.tag.outputs.tag }}"
             echo ""
-            if [ "$COUNT" -eq 0 ]; then
-              echo "✅ No known vulnerabilities found."
+            echo "| Scanner | Data source | Findings |"
+            echo "|---------|-------------|----------|"
+            echo "| [Grype](https://github.com/anchore/grype) | NVD + vendor feeds | $GRYPE_COUNT |"
+            echo "| [OSV-Scanner](https://github.com/google/osv-scanner) | OSV.dev / GHSA | $OSV_COUNT |"
+            echo "| [Trivy](https://github.com/aquasecurity/trivy) | NVD + Red Hat + Debian + GHSA | $TRIVY_COUNT |"
+            echo "| npm audit | GitHub Advisory Database | $NPM_AUDIT_COUNT |"
+            echo ""
+            if [ "$TOTAL" -eq 0 ]; then
+              echo "✅ No known vulnerabilities found by any scanner."
             else
-              echo "⚠️ **$COUNT vulnerability finding(s)**"
+              echo "⚠️ **$TOTAL vulnerability finding(s) across all scanners**"
+              echo ""
+              echo "<details><summary>Grype report</summary>"
               echo ""
               echo '```'
               cat grype-report.txt
               echo '```'
+              echo "</details>"
+              echo ""
+              echo "<details><summary>OSV-Scanner report</summary>"
+              echo ""
+              echo '```'
+              cat osv-report.txt
+              echo '```'
+              echo "</details>"
+              echo ""
+              echo "<details><summary>Trivy report</summary>"
+              echo ""
+              echo '```'
+              cat trivy-report.txt
+              echo '```'
+              echo "</details>"
+              echo ""
+              echo "<details><summary>npm audit report</summary>"
+              echo ""
+              echo '```'
+              cat npm-audit-report.txt
+              echo '```'
+              echo "</details>"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -99,10 +195,16 @@ jobs:
         if: steps.tag.outputs.found == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: grype-report-${{ steps.tag.outputs.tag }}
+          name: sbom-scan-reports-${{ steps.tag.outputs.tag }}
           path: |
             grype-report.txt
             grype-report.json
+            osv-report.txt
+            osv-report.json
+            trivy-report.txt
+            trivy-report.json
+            npm-audit-report.txt
+            npm-audit-report.json
             sbom.cdx.json
           retention-days: 30
 
@@ -111,18 +213,62 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
-          COUNT: ${{ steps.scan.outputs.count }}
+          TOTAL: ${{ steps.scan.outputs.count }}
+          GRYPE_COUNT: ${{ steps.grype.outputs.count }}
+          OSV_COUNT: ${{ steps.osv.outputs.count }}
+          TRIVY_COUNT: ${{ steps.trivy.outputs.count }}
+          NPM_AUDIT_COUNT: ${{ steps.npm-audit.outputs.count }}
         run: |
           TITLE="Nightly SBOM scan: vulnerabilities in $TAG"
 
           {
-            echo "The nightly [Grype](https://github.com/anchore/grype) scan of the \`$TAG\` release SBOM found **$COUNT vulnerability finding(s)**."
+            echo "The nightly SBOM scan of the \`$TAG\` release found **$TOTAL vulnerability finding(s)** across four independent scanners."
             echo ""
-            echo "| Package | Version | Vulnerability | Severity | Fixed in |"
-            echo "|---------|---------|---------------|----------|----------|"
-            jq -r '.matches[] | "| \(.artifact.name) | \(.artifact.version) | \(.vulnerability.id) | \(.vulnerability.severity) | \(if (.vulnerability.fix.versions | length) > 0 then (.vulnerability.fix.versions | join(", ")) else "—" end) |"' grype-report.json
+            echo "| Scanner | Data source | Findings |"
+            echo "|---------|-------------|----------|"
+            echo "| [Grype](https://github.com/anchore/grype) | NVD + vendor feeds | $GRYPE_COUNT |"
+            echo "| [OSV-Scanner](https://github.com/google/osv-scanner) | OSV.dev / GHSA | $OSV_COUNT |"
+            echo "| [Trivy](https://github.com/aquasecurity/trivy) | NVD + Red Hat + Debian + GHSA | $TRIVY_COUNT |"
+            echo "| npm audit | GitHub Advisory Database | $NPM_AUDIT_COUNT |"
             echo ""
-            echo "_Last scan: $(date -u '+%Y-%m-%d %H:%M UTC') — full report in the [workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})._"
+
+            if [ "$GRYPE_COUNT" != "0" ]; then
+              echo "### Grype"
+              echo ""
+              echo "| Package | Version | Vulnerability | Severity | Fixed in |"
+              echo "|---------|---------|---------------|----------|----------|"
+              jq -r '.matches[] | "| \(.artifact.name) | \(.artifact.version) | \(.vulnerability.id) | \(.vulnerability.severity) | \(if (.vulnerability.fix.versions | length) > 0 then (.vulnerability.fix.versions | join(", ")) else "—" end) |"' grype-report.json
+              echo ""
+            fi
+
+            if [ "$OSV_COUNT" != "0" ]; then
+              echo "### OSV-Scanner"
+              echo ""
+              echo "| Package | Version | Vulnerability |"
+              echo "|---------|---------|----------------|"
+              jq -r '.results[]?.packages[]? | .package as $p | .vulnerabilities[]? | "| \($p.name) | \($p.version) | \(.id) |"' osv-report.json
+              echo ""
+            fi
+
+            if [ "$TRIVY_COUNT" != "0" ]; then
+              echo "### Trivy"
+              echo ""
+              echo "| Package | Version | Vulnerability | Severity | Fixed in |"
+              echo "|---------|---------|---------------|----------|----------|"
+              jq -r '.Results[]?.Vulnerabilities[]? | "| \(.PkgName) | \(.InstalledVersion) | \(.VulnerabilityID) | \(.Severity) | \(.FixedVersion // "—") |"' trivy-report.json
+              echo ""
+            fi
+
+            if [ "$NPM_AUDIT_COUNT" != "0" ]; then
+              echo "### npm audit"
+              echo ""
+              echo "| Package | Severity | Vulnerability |"
+              echo "|---------|----------|----------------|"
+              jq -r '.vulnerabilities // {} | to_entries[] | .value as $v | ($v.via // []) | map(select(type == "object")) | .[] | "| \($v.name) | \($v.severity) | \(.title // .name) |"' npm-audit-report.json | sort -u
+              echo ""
+            fi
+
+            echo "_Last scan: $(date -u '+%Y-%m-%d %H:%M UTC') — full reports in the [workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})._"
           } > issue-body.md
 
           gh label create sbom-scan --description "Automated nightly SBOM vulnerability scan" --color D93F0B --force || true
@@ -139,5 +285,5 @@ jobs:
       - name: Fail run when vulnerabilities were found
         if: steps.tag.outputs.found == 'true' && steps.scan.outputs.count != '0'
         run: |
-          echo "::error::${{ steps.scan.outputs.count }} vulnerability finding(s) in the ${{ steps.tag.outputs.tag }} SBOM — see the job summary and the 'sbom-scan' issue."
+          echo "::error::${{ steps.scan.outputs.count }} vulnerability finding(s) in the ${{ steps.tag.outputs.tag }} SBOM (Grype/OSV-Scanner/Trivy/npm audit) — see the job summary and the 'sbom-scan' issue."
           exit 1
