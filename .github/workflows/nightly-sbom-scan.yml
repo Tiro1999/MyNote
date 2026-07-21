@@ -1,10 +1,11 @@
 name: Nightly SBOM Scan
 
-# Scans the SBOM of the most recent release tag for known vulnerabilities
-# every night, cross-checking three independent data sources (Grype, OSV.dev
-# via osv-scanner, Trivy) plus npm audit against the GitHub Advisory
-# Database. Findings are written to the job summary and reported in a
-# GitHub issue; the run fails when vulnerabilities are found so the signal
+# Scans the SBOM of the latest published GitHub Release (GitHub's own
+# "Latest" designation — never a draft or pre-release) for known
+# vulnerabilities every night, cross-checking three independent data sources
+# (Grype, OSV.dev via osv-scanner, Trivy) plus npm audit against the GitHub
+# Advisory Database. Findings are written to the job summary and reported in
+# a GitHub issue; the run fails when vulnerabilities are found so the signal
 # is visible in the Actions overview.
 
 on:
@@ -23,20 +24,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0 # full history — needed to list release tags
 
-      - name: Resolve latest release tag
+      # `gh release view` with no tag argument resolves exactly the release
+      # GitHub itself marks "Latest" on the Releases page — it skips drafts
+      # and pre-releases, so a tag whose release hasn't been published yet
+      # (release.yml always creates drafts) is never picked up here.
+      - name: Resolve latest published release
         id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          TAG=$(gh release view --json tagName -q '.tagName' 2>/dev/null || true)
           if [ -z "$TAG" ]; then
-            echo "::notice::No release tag found yet — nothing to scan."
+            echo "::notice::No published release found yet — nothing to scan."
             echo "found=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Latest release tag: $TAG"
+            echo "Latest published release: $TAG"
             echo "found=true" >> "$GITHUB_OUTPUT"
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            git fetch --depth 1 origin "refs/tags/$TAG:refs/tags/$TAG"
             git checkout "refs/tags/$TAG"
           fi
 
