@@ -3,4 +3,5 @@
 !.github/workflows/
 application/local-res
 .claude/local/
+*.local.*
 docs/
