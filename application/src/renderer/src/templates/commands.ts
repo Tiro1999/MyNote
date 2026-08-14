@@ -5,6 +5,8 @@ import { insertPageHierarchy } from './PageHierarchyBlockExtension'
 import { insertTable } from './TableCommand'
 import { insertFinanceLedger } from './FinanceLedgerExtension'
 import { insertFinanceStats } from './StatisticsBlockExtension'
+import { insertCardLibrary } from './MtgCardLibraryExtension'
+import { useFeatureStore } from '../store/featureStore'
 import type { TemplateCommand } from './types'
 
 /** Extra English/German search keywords per callout variant, in addition to the variant id itself. */
@@ -77,9 +79,37 @@ const FINANCE_COMMANDS: TemplateCommand[] = [
   }
 ]
 
+/**
+ * Magic: the Gathering commands. Only offered when the module is switched on in
+ * Settings — a user who doesn't play shouldn't have to scroll past them.
+ */
+const MTG_COMMANDS: TemplateCommand[] = [
+  {
+    id: 'mtg-cardlibrary',
+    title: 'MTG-Kartenbibliothek',
+    description: 'Durchsucht deine Sammlung mit Filtern, angereichert mit Scryfall-Daten',
+    icon: '🃏',
+    keywords: [
+      'mtg',
+      'magic',
+      'cardlibrary',
+      'kartenbibliothek',
+      'sammlung',
+      'collection',
+      'cards',
+      'karten',
+      'scryfall',
+      'manabox'
+    ],
+    action: (editor, range) => insertCardLibrary(editor, range)
+  }
+]
+
 /** All available `/` slash commands, in menu order. */
 export function getTemplateCommands(): TemplateCommand[] {
-  return [...CALLOUT_COMMANDS, ...STRUCTURE_COMMANDS, ...FINANCE_COMMANDS]
+  const commands = [...CALLOUT_COMMANDS, ...STRUCTURE_COMMANDS, ...FINANCE_COMMANDS]
+  if (useFeatureStore.getState().mtgEnabled) commands.push(...MTG_COMMANDS)
+  return commands
 }
 
 /** Filters commands by title or keyword against the typed query (case-insensitive substring match). */

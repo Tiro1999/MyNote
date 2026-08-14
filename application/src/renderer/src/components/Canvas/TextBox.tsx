@@ -19,7 +19,8 @@ import {
   ExternalLinkGuard,
   TableWithControls,
   FinanceLedger,
-  FinanceStats
+  FinanceStats,
+  MtgCardLibrary
 } from '../../templates'
 import Toolbar from './Toolbar'
 
@@ -59,6 +60,10 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       TableCell,
       FinanceLedger,
       FinanceStats,
+      // Registered unconditionally even when the MTG module is switched off:
+      // the feature flag hides the slash command, but a page that already
+      // contains a library block must still parse and render.
+      MtgCardLibrary,
       SlashCommand.configure({ context: { kind: activeContentKind, id: activeContentId } })
     ],
     content: element.content as object,

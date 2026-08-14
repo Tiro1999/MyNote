@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useFeatureStore } from '../../store/featureStore'
 
 interface Props {
   open: boolean
@@ -6,6 +7,8 @@ interface Props {
 }
 
 export default function SettingsDialog({ open, onClose }: Props): JSX.Element | null {
+  const mtgEnabled = useFeatureStore((state) => state.mtgEnabled)
+  const setMtgEnabled = useFeatureStore((state) => state.setMtgEnabled)
   const [autoUpdate, setAutoUpdate] = useState(true)
   const [loading, setLoading] = useState(true)
   const [checking, setChecking] = useState(false)
@@ -36,6 +39,10 @@ export default function SettingsDialog({ open, onClose }: Props): JSX.Element | 
     const next = !autoUpdate
     setAutoUpdate(next) // optimistic — persistence is fast and can't meaningfully fail
     await window.api.settings.setAutoUpdate(next)
+  }
+
+  const handleToggleMtg = async (): Promise<void> => {
+    await setMtgEnabled(!mtgEnabled)
   }
 
   const handleCheckForUpdates = async (): Promise<void> => {
@@ -124,6 +131,41 @@ export default function SettingsDialog({ open, onClose }: Props): JSX.Element | 
                 {checkMessage}
               </span>
             )}
+          </div>
+        </section>
+
+        <section className="mt-5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Modules
+          </h3>
+          <div className="mt-2 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Magic: the Gathering
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                Adds the <code>/mtg-cardlibrary</code> command for managing a card collection,
+                with ManaBox import and Scryfall data. When off, the commands are hidden and no
+                card data is downloaded — existing blocks keep working.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={mtgEnabled}
+              aria-label="Magic: the Gathering module"
+              disabled={loading}
+              onClick={handleToggleMtg}
+              className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                mtgEnabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+              } ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  mtgEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
           </div>
         </section>
 

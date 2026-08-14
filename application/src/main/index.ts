@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import * as fs from 'fs'
 import * as zlib from 'zlib'
+import * as scryfall from './scryfall'
 
 // ─── App settings ───────────────────────────────────────────────────────────
 // Persisted as JSON in the OS-specific userData directory so the main process
@@ -12,9 +13,12 @@ import * as zlib from 'zlib'
 
 interface AppSettings {
   autoUpdateEnabled: boolean
+  /** Opt-in for the Magic: the Gathering module. Off by default so users who
+   *  don't want it pay nothing — no slash commands, no Scryfall cache. */
+  mtgEnabled: boolean
 }
 
-const DEFAULT_SETTINGS: AppSettings = { autoUpdateEnabled: true }
+const DEFAULT_SETTINGS: AppSettings = { autoUpdateEnabled: true, mtgEnabled: false }
 
 function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
@@ -292,9 +296,55 @@ ipcMain.handle('xlsx:readSheet', async (_, filePath: string): Promise<string[][]
   return parseSheet(readZipEntry(buf, 'xl/worksheets/sheet1.xml') ?? '', shared)
 })
 
+// ─── Scryfall IPC ─────────────────────────────────────────────────────────────
+// All Scryfall traffic is funnelled through the main process: the renderer CSP
+// forbids outbound requests, and rate limiting only works if one place owns it.
+// Long-running calls report progress back over 'scryfall:progress'.
+
+ipcMain.handle('scryfall:listBulk', () => scryfall.listBulkData())
+
+ipcMain.handle('scryfall:cacheMeta', () => scryfall.readCacheMeta())
+
+ipcMain.handle('scryfall:isStale', () => scryfall.isOracleIndexStale())
+
+ipcMain.handle('scryfall:buildIndex', async (event, bulkType?: string) =>
+  scryfall.buildOracleIndex(bulkType ?? 'oracle_cards', (progress) => {
+    if (!event.sender.isDestroyed()) event.sender.send('scryfall:progress', progress)
+  })
+)
+
+ipcMain.handle('scryfall:readIndex', () => scryfall.readOracleIndex())
+
+ipcMain.handle(
+  'scryfall:fetchPrintings',
+  async (event, identifiers: scryfall.CardIdentifier[]) => {
+    const result = await scryfall.fetchPrintings(identifiers, (progress) => {
+      if (!event.sender.isDestroyed()) event.sender.send('scryfall:progress', progress)
+    })
+    await scryfall.savePrintings(result.found)
+    return result
+  }
+)
+
+ipcMain.handle('scryfall:readPrintings', () => scryfall.readPrintings())
+
+ipcMain.handle('scryfall:cacheImage', (_, printingId: string, url: string, size: string) =>
+  scryfall.cacheImage(printingId, url, size)
+)
+
+ipcMain.handle('scryfall:cacheSize', () => scryfall.cacheSize())
+
+ipcMain.handle('scryfall:clearCache', () => scryfall.clearCache())
+
 // ─── Settings IPC ───────────────────────────────────────────────────────────
 
 ipcMain.handle('settings:get', (): AppSettings => readSettings())
+
+ipcMain.handle('settings:setMtgEnabled', (_, enabled: boolean): AppSettings => {
+  const settings = { ...readSettings(), mtgEnabled: enabled }
+  writeSettings(settings)
+  return settings
+})
 
 ipcMain.handle('settings:setAutoUpdate', (_, enabled: boolean): AppSettings => {
   const settings = { ...readSettings(), autoUpdateEnabled: enabled }

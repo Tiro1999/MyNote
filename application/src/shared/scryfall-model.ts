@@ -34,8 +34,11 @@ export const LEGALITY_FORMATS = [
   'duel',
   'oldschool',
   'premodern',
-  'predh'
+  'predh',
+  'tlr'
 ] as const
+// Order is append-only: an encoded string is positional, so inserting a format
+// anywhere but the end would silently reinterpret every cached card.
 
 export type LegalityFormat = (typeof LEGALITY_FORMATS)[number]
 export type LegalityValue = 'legal' | 'not_legal' | 'banned' | 'restricted'

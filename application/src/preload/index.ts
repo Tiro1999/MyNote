@@ -34,11 +34,42 @@ const api = {
     readSheet: (filePath: string): Promise<string[][]> =>
       ipcRenderer.invoke('xlsx:readSheet', filePath)
   },
+  scryfall: {
+    listBulk: () => ipcRenderer.invoke('scryfall:listBulk'),
+    cacheMeta: () => ipcRenderer.invoke('scryfall:cacheMeta'),
+    isStale: () => ipcRenderer.invoke('scryfall:isStale'),
+    buildIndex: (bulkType?: string) => ipcRenderer.invoke('scryfall:buildIndex', bulkType),
+    readIndex: () => ipcRenderer.invoke('scryfall:readIndex'),
+    fetchPrintings: (identifiers: unknown[]) =>
+      ipcRenderer.invoke('scryfall:fetchPrintings', identifiers),
+    readPrintings: () => ipcRenderer.invoke('scryfall:readPrintings'),
+    cacheImage: (printingId: string, url: string, size: string) =>
+      ipcRenderer.invoke('scryfall:cacheImage', printingId, url, size),
+    cacheSize: () => ipcRenderer.invoke('scryfall:cacheSize'),
+    clearCache: () => ipcRenderer.invoke('scryfall:clearCache'),
+    /** Progress for long-running index builds / printing lookups. Returns an unsubscribe function. */
+    onProgress: (
+      callback: (progress: { phase: string; count: number; total?: number }) => void
+    ): (() => void) => {
+      const listener = (
+        _event: unknown,
+        progress: { phase: string; count: number; total?: number }
+      ): void => callback(progress)
+      ipcRenderer.on('scryfall:progress', listener)
+      return () => ipcRenderer.removeListener('scryfall:progress', listener)
+    }
+  },
   settings: {
-    get: (): Promise<{ autoUpdateEnabled: boolean }> =>
+    get: (): Promise<{ autoUpdateEnabled: boolean; mtgEnabled: boolean }> =>
       ipcRenderer.invoke('settings:get'),
-    setAutoUpdate: (enabled: boolean): Promise<{ autoUpdateEnabled: boolean }> =>
-      ipcRenderer.invoke('settings:setAutoUpdate', enabled)
+    setAutoUpdate: (
+      enabled: boolean
+    ): Promise<{ autoUpdateEnabled: boolean; mtgEnabled: boolean }> =>
+      ipcRenderer.invoke('settings:setAutoUpdate', enabled),
+    setMtgEnabled: (
+      enabled: boolean
+    ): Promise<{ autoUpdateEnabled: boolean; mtgEnabled: boolean }> =>
+      ipcRenderer.invoke('settings:setMtgEnabled', enabled)
   },
   updates: {
     check: (): Promise<

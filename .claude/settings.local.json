@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm --version)",
       "Bash(npm -v)",
-      "Bash(npm view *)"
+      "Bash(npm view *)",
+      "Read(//home/node/.claude/**)",
+      "Read(//home/node/.claude/plugins/**)",
+      "WebFetch(domain:docs.github.com)"
     ]
   }
 }

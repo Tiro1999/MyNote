@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNotebookStore } from './store/notebookStore'
+import { useFeatureStore } from './store/featureStore'
 import Sidebar from './components/Sidebar/Sidebar'
 import CanvasView from './components/Canvas/CanvasView'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
@@ -13,6 +14,12 @@ export default function App(): JSX.Element {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
+
+  // Optional modules gate the slash-command menu, which is built synchronously —
+  // so the flags are loaded once here rather than awaited per keystroke.
+  useEffect(() => {
+    void useFeatureStore.getState().load()
+  }, [])
 
   // No browser available to open the link (e.g. headless dev container) —
   // the main process already copied it to the clipboard; just surface it.
