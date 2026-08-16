@@ -23,6 +23,7 @@ import {
   entryKey,
   type Finish
 } from '../../mtg/model'
+import { legalityTags, type LegalityEvent } from '../../mtg/legality'
 import { decodeLegality } from '../../../../shared/scryfall-model'
 import ManaboxImportDialog from './ManaboxImportDialog'
 
@@ -68,6 +69,9 @@ export default function CardLibraryBlock({ node, updateAttributes }: NodeViewPro
     loadCollection,
     loadScryfallCache,
     syncPrintings,
+    checkLegalityChanges,
+    dismissLegalityEvents,
+    legalityEvents,
     setBusy
   } = useMtgStore()
 
@@ -147,7 +151,16 @@ export default function CardLibraryBlock({ node, updateAttributes }: NodeViewPro
       setIndexState({ count: meta.oracleCount, builtAt: meta.builtAt })
       useMtgStore.setState({ indexLoaded: false })
       await loadScryfallCache()
-      setMessage(`${meta.oracleCount.toLocaleString('de-DE')} Karten geladen.`)
+
+      // The fresh index is the only moment legality can have moved, so the
+      // check rides along with the refresh rather than running on a timer.
+      const events = await checkLegalityChanges()
+      const loaded = `${meta.oracleCount.toLocaleString('de-DE')} Karten geladen.`
+      setMessage(
+        events.length === 0
+          ? `${loaded} Keine Legalitätsänderungen.`
+          : `${loaded} ${events.length} Legalitätsänderung${events.length === 1 ? '' : 'en'} gefunden.`
+      )
     } catch (error) {
       setMessage(`Fehler: ${(error as Error).message}`)
     } finally {
@@ -261,6 +274,10 @@ export default function CardLibraryBlock({ node, updateAttributes }: NodeViewPro
               ok
             </button>
           </div>
+        )}
+
+        {legalityEvents.length > 0 && (
+          <LegalityBanner events={legalityEvents} onDismiss={dismissLegalityEvents} />
         )}
 
         {/* ── Filters ── */}
@@ -499,6 +516,23 @@ function CardRow({
   // Surface a ban directly in the row — the user asked to see legality at a glance.
   const legality = legalIn && oracle ? decodeLegality(oracle.legalities, legalIn) : null
 
+  // The full per-card tag set, as a tooltip rather than a column: eleven more
+  // columns would push the table off screen for something read one card at a time.
+  const tags = oracle ? legalityTags(oracle.legalities) : []
+  const legalFormats = tags.filter((tag) => tag.value === 'legal')
+  const blockedFormats = tags.filter((tag) => tag.value === 'banned' || tag.value === 'restricted')
+  const legalityTitle = oracle
+    ? [
+        `Legal: ${legalFormats.map((tag) => tag.label).join(', ') || 'nirgends'}`,
+        blockedFormats.length > 0 &&
+          `Gesperrt: ${blockedFormats
+            .map((tag) => `${tag.label} (${tag.value === 'banned' ? 'gebannt' : 'limitiert'})`)
+            .join(', ')}`
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : undefined
+
   return (
     <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
       <td className="px-2 py-1 tabular-nums text-gray-500 dark:text-gray-400">{entry.quantity}×</td>
@@ -510,6 +544,14 @@ function CardRow({
         {legality && legality !== 'legal' && (
           <span className="ml-1 rounded bg-red-100 px-1 text-[10px] text-red-700 dark:bg-red-950 dark:text-red-300">
             {legality === 'banned' ? 'gebannt' : legality === 'restricted' ? 'limitiert' : 'illegal'}
+          </span>
+        )}
+        {oracle && (
+          <span
+            className="ml-1 cursor-help text-[10px] text-gray-400 dark:text-gray-500"
+            title={legalityTitle}
+          >
+            {legalFormats.length}/{tags.length}
           </span>
         )}
         {!oracle && (
@@ -540,6 +582,62 @@ function CardRow({
         {value > 0 ? formatCents(value) : '—'}
       </td>
     </tr>
+  )
+}
+
+/**
+ * Legality changes since the last Scryfall refresh.
+ *
+ * Errors first — a banned card in a deck you own is the whole reason the tracker
+ * exists, and it must not sit below twenty "is now legal again" lines.
+ */
+function LegalityBanner({
+  events,
+  onDismiss
+}: {
+  events: LegalityEvent[]
+  onDismiss: () => void
+}): JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+  const shown = expanded ? events : events.slice(0, 5)
+  const errors = events.filter((event) => event.severity === 'error').length
+
+  const style: Record<LegalityEvent['severity'], string> = {
+    error: 'text-red-700 dark:text-red-300',
+    warning: 'text-amber-700 dark:text-amber-300',
+    info: 'text-gray-600 dark:text-gray-300'
+  }
+  const icon: Record<LegalityEvent['severity'], string> = { error: '⛔', warning: '⚠️', info: 'ℹ️' }
+
+  return (
+    <div className="border-b border-amber-300 bg-amber-50 p-2 text-xs dark:border-amber-700 dark:bg-amber-950">
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-amber-900 dark:text-amber-200">
+          Legalitätsänderungen: {events.length}
+          {errors > 0 && ` — ${errors} betreffen deine Decks`}
+        </span>
+        <button className="ml-auto underline" onClick={onDismiss}>
+          ausblenden
+        </button>
+      </div>
+
+      <ul className="mt-1 space-y-0.5">
+        {shown.map((event) => (
+          <li
+            key={`${event.change.oracleId}-${event.change.format}`}
+            className={style[event.severity]}
+          >
+            {icon[event.severity]} {event.message}
+          </li>
+        ))}
+      </ul>
+
+      {events.length > shown.length && (
+        <button className="mt-1 underline" onClick={() => setExpanded(true)}>
+          alle {events.length} anzeigen
+        </button>
+      )}
+    </div>
   )
 }
 

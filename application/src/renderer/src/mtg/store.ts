@@ -7,6 +7,7 @@
  *   {dataRoot}/mtg/
  *     collection.csv          all owned stacks, sorted canonically
  *     wishlist.csv            wanted cards
+ *     legality-snapshot.csv   what Scryfall last said about the tracked cards
  *     decks/{deckId}.json     one file per deck
  *     backups/{timestamp}/    snapshots taken before destructive operations
  *
@@ -20,8 +21,17 @@ import {
   parseCollectionCsv,
   serializeCollectionCsv,
   parseWishlistCsv,
-  serializeWishlistCsv
+  serializeWishlistCsv,
+  parseLegalitySnapshotCsv,
+  serializeLegalitySnapshotCsv
 } from './csv'
+import {
+  buildSnapshot,
+  diffSnapshots,
+  relevantOracleIds,
+  scopeChanges,
+  type LegalityEvent
+} from './legality'
 import {
   entryKey,
   sortDeckCards,
@@ -65,6 +75,10 @@ interface MtgState {
   indexLoaded: boolean
   /** Progress text for long-running Scryfall work, or null when idle. */
   busy: string | null
+  /** Legality changes since the last check that touch this collection. */
+  legalityEvents: LegalityEvent[]
+  /** True once a baseline snapshot exists, so "no events" means "nothing changed". */
+  legalityBaseline: boolean
 
   loadCollection: () => Promise<void>
   saveCollection: (entries: CollectionEntry[]) => Promise<void>
@@ -77,6 +91,12 @@ interface MtgState {
   saveDeck: (deck: Deck) => Promise<void>
   createDeck: (name: string, format: Deck['format']) => Promise<string>
   deleteDeck: (deckId: string) => Promise<void>
+  /**
+   * Diff Scryfall's current legality answer against the stored snapshot and
+   * raise events for anything that touches the collection, wishlist or decks.
+   */
+  checkLegalityChanges: () => Promise<LegalityEvent[]>
+  dismissLegalityEvents: () => void
   /** Snapshot the whole mtg folder; returns the backup folder name. */
   backup: () => Promise<string>
   listBackups: () => Promise<string[]>
@@ -93,6 +113,8 @@ export const useMtgStore = create<MtgState>((set, get) => ({
   collectionLoaded: false,
   indexLoaded: false,
   busy: null,
+  legalityEvents: [],
+  legalityBaseline: false,
 
   setBusy: (message) => set({ busy: message }),
 
@@ -233,6 +255,37 @@ export const useMtgStore = create<MtgState>((set, get) => ({
     set((state) => ({ decks: state.decks.filter((deck) => deck.id !== deckId) }))
   },
 
+  checkLegalityChanges: async () => {
+    const { collection, wishlist, decks, oracleById, printingById } = get()
+
+    const tracked = relevantOracleIds({ collection, wishlist, decks, printingById })
+    const current = buildSnapshot(tracked, oracleById)
+    if (current.length === 0) return []
+
+    const path = mtgPath('legality-snapshot.csv')
+    const previousText = await readText(path)
+    const hadBaseline = previousText.length > 0
+    const previous = parseLegalitySnapshotCsv(previousText)
+
+    // First run writes the baseline only. Without this every tracked card would
+    // arrive as a change and the first notification would be thousands of rows.
+    const events = hadBaseline
+      ? scopeChanges(diffSnapshots(previous, current), {
+          decks,
+          collection,
+          wishlist,
+          printingById
+        })
+      : []
+
+    await window.api.fs.mkdir(mtgPath())
+    await window.api.fs.writeFile(path, serializeLegalitySnapshotCsv(current))
+    set({ legalityEvents: events, legalityBaseline: true })
+    return events
+  },
+
+  dismissLegalityEvents: () => set({ legalityEvents: [] }),
+
   backup: async () => {
     // Colons are illegal in Windows filenames, so the timestamp is flattened.
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -245,6 +298,14 @@ export const useMtgStore = create<MtgState>((set, get) => ({
       serializeCollectionCsv(collection)
     )
     await window.api.fs.writeFile(join(target, 'wishlist.csv'), serializeWishlistCsv(wishlist))
+
+    // Copied rather than rebuilt: restoring a backup without the snapshot would
+    // make the next check treat every ban since then as brand new.
+    const snapshot = await readText(mtgPath('legality-snapshot.csv'))
+    if (snapshot) {
+      await window.api.fs.writeFile(join(target, 'legality-snapshot.csv'), snapshot)
+    }
+
     for (const deck of decks) {
       await window.api.fs.writeFile(
         join(target, 'decks', `${deck.id}.json`),

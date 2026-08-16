@@ -8,6 +8,13 @@
  */
 import { parseCsv, serializeCsv } from '../lib/csv'
 import {
+  LEGALITY_FORMATS,
+  decodeLegality,
+  encodeLegalities,
+  type LegalityValue
+} from '../../../shared/scryfall-model'
+import { sortSnapshot, type LegalitySnapshotRow } from './legality'
+import {
   entryKey,
   sortEntries,
   type CollectionEntry,
@@ -159,6 +166,64 @@ export function parseWishlistCsv(text: string): WishlistEntry[] {
     })
   }
   return entries
+}
+
+// ─── Legality snapshot ────────────────────────────────────────────────────────
+
+/**
+ * The legality snapshot is written as readable format lists rather than the
+ * packed encoding used in memory, because this file's whole job is to be diffed:
+ * `banned=modern` → `banned=modern,pioneer` says what happened at a glance, and
+ * a nightly report can quote the diff line straight into an email. Formats not
+ * listed in any column are `not_legal` — that keeps the common case short while
+ * staying lossless across all four states.
+ */
+export const LEGALITY_HEADER = ['oracleId', 'name', 'legal', 'banned', 'restricted'] as const
+
+function formatsWith(encoded: string, wanted: LegalityValue): string {
+  return LEGALITY_FORMATS.filter((format) => decodeLegality(encoded, format) === wanted).join(',')
+}
+
+export function serializeLegalitySnapshotCsv(rows: LegalitySnapshotRow[]): string {
+  const out: string[][] = [[...LEGALITY_HEADER]]
+  for (const row of sortSnapshot(rows)) {
+    out.push([
+      row.oracleId,
+      row.name,
+      formatsWith(row.legalities, 'legal'),
+      formatsWith(row.legalities, 'banned'),
+      formatsWith(row.legalities, 'restricted')
+    ])
+  }
+  return `${serializeCsv(out)}\r\n`
+}
+
+export function parseLegalitySnapshotCsv(text: string): LegalitySnapshotRow[] {
+  const rows = parseCsv(text)
+  if (rows.length <= 1) return []
+  const index = new Map(rows[0].map((header, i) => [header.trim(), i]))
+  const at = (cells: string[], column: (typeof LEGALITY_HEADER)[number]): string => {
+    const i = index.get(column)
+    return i === undefined ? '' : (cells[i] ?? '')
+  }
+
+  const parsed: LegalitySnapshotRow[] = []
+  for (const cells of rows.slice(1)) {
+    if (cells.length === 0 || (cells.length === 1 && cells[0] === '')) continue
+    const legalities: Record<string, string> = {}
+    for (const value of ['legal', 'banned', 'restricted'] as const) {
+      for (const format of at(cells, value).split(',')) {
+        if (format) legalities[format.trim()] = value
+      }
+    }
+    parsed.push({
+      oracleId: at(cells, 'oracleId'),
+      name: at(cells, 'name'),
+      // Unlisted formats fall through to 'not_legal' inside encodeLegalities.
+      legalities: encodeLegalities(legalities)
+    })
+  }
+  return sortSnapshot(parsed)
 }
 
 /** Total physical cards held, as opposed to the number of distinct stacks. */
