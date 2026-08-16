@@ -174,6 +174,48 @@ describe('filterCards', () => {
     expect(result.map((c) => c.entry.name)).toEqual(['Sol Ring'])
   })
 
+  it('finds restricted cards, which are legal but capped at one copy', () => {
+    const vintage = [
+      card(
+        { name: 'Black Lotus' },
+        { legalities: encodeLegalities({ vintage: 'restricted', legacy: 'banned' }) }
+      ),
+      card({ name: 'Forest' }, { legalities: encodeLegalities({ vintage: 'legal' }) })
+    ]
+    expect(
+      filterCards(vintage, { ...EMPTY_FILTER, text: 'restricted:vintage' }).map((c) => c.entry.name)
+    ).toEqual(['Black Lotus'])
+    // Restricted is not banned, and it still counts as legal in the format.
+    expect(filterCards(vintage, { ...EMPTY_FILTER, text: 'banned:vintage' })).toHaveLength(0)
+  })
+
+  it('orders rarity comparisons, with special ranked below mythic', () => {
+    const byRarity = ['common', 'uncommon', 'rare', 'special', 'mythic', 'bonus'].map((rarity) =>
+      card({ name: rarity }, {}, { rarity })
+    )
+    expect(
+      filterCards(byRarity, { ...EMPTY_FILTER, text: 'r>=rare' }).map((c) => c.entry.name)
+    ).toEqual(['rare', 'special', 'mythic', 'bonus'])
+    expect(
+      filterCards(byRarity, { ...EMPTY_FILTER, text: 'r<uncommon' }).map((c) => c.entry.name)
+    ).toEqual(['common'])
+    // ':' stays an exact match so `r:rare` doesn't silently include mythics.
+    expect(filterCards(byRarity, { ...EMPTY_FILTER, text: 'r:rare' })).toHaveLength(1)
+    // An unorderable value must not match rather than sort as index -1.
+    expect(filterCards(byRarity, { ...EMPTY_FILTER, text: 'r>=nonsense' })).toHaveLength(0)
+  })
+
+  it('searches keywords', () => {
+    const withKeywords = [
+      card({ name: 'Serra Angel' }, { keywords: ['Flying', 'Vigilance'] }),
+      card({ name: 'Grizzly Bears' }, { keywords: [] })
+    ]
+    expect(
+      filterCards(withKeywords, { ...EMPTY_FILTER, text: 'kw:flying' }).map((c) => c.entry.name)
+    ).toEqual(['Serra Angel'])
+    expect(filterCards(withKeywords, { ...EMPTY_FILTER, text: '-kw:flying' })).toHaveLength(1)
+  })
+
   it('filters by structured controls', () => {
     expect(filterCards(cards, { ...EMPTY_FILTER, sets: ['ltr'] })).toHaveLength(1)
     expect(filterCards(cards, { ...EMPTY_FILTER, rarities: ['rare'] })).toHaveLength(1)

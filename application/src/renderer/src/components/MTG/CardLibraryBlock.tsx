@@ -189,6 +189,16 @@ export default function CardLibraryBlock({ node, updateAttributes }: NodeViewPro
           <input
             className="min-w-[14rem] flex-1 rounded border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
             placeholder="Suche — z.B. t:creature cmc<=3 c:g -t:legendary"
+            title={
+              'Suchoperatoren (mit - negierbar, Werte in "…" für Leerzeichen):\n' +
+              'n: Name   t: Typ   o: Regeltext   kw: Schlüsselwort\n' +
+              'c: Farbe   ci: Farbidentität (höchstens)   cmc:/mv: Manawert\n' +
+              'r: Seltenheit (auch r>=rare)   s:/e: Set   qty: Anzahl\n' +
+              'lang: Sprache   cond: Zustand   finish: Ausführung\n' +
+              'loc: Lagerort   note: Notiz\n' +
+              'f: legal im Format   banned: gebannt   restricted: max. 1 Kopie\n' +
+              'is:foil is:etched is:altered is:misprint is:reserved is:unknown'
+            }
             value={filter.text}
             onChange={(e) => patch({ text: e.target.value })}
           />

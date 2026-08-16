@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mynote.app/schema/tiptap-document.schema.json",
   "title": "MyNote Rich-Text Document (TipTap / ProseMirror JSON)",
-  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign, @tiptap/extension-table + table-row/table-header/table-cell) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink, TocBlock, PageHierarchyBlock, TableWithControls). TocBlock/PageHierarchyBlock are persisted only as their bare type+attrs \u2014 their visible content is computed live at render time from the document/notebook store, not stored on disk. TableWithControls only customizes the table node's editor NodeView (the add-row/add-column '+' buttons); the persisted table/tableRow/tableHeader/tableCell JSON is unchanged from the stock @tiptap/extension-table schema. MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
+  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign, @tiptap/extension-table + table-row/table-header/table-cell) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink, TocBlock, PageHierarchyBlock, TableWithControls, FinanceLedger, FinanceStats, MtgCardLibrary). TocBlock/PageHierarchyBlock/FinanceLedger/FinanceStats/MtgCardLibrary are persisted only as their bare type+attrs \u2014 their visible content is computed live at render time from the document/notebook store or from the module data under {dataRoot}/finance/ and {dataRoot}/mtg/, not stored in the document. TableWithControls only customizes the table node's editor NodeView (the add-row/add-column '+' buttons); the persisted table/tableRow/tableHeader/tableCell JSON is unchanged from the stock @tiptap/extension-table schema. MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
   "type": "object",
   "additionalProperties": false,
   "required": ["type", "content"],
@@ -132,6 +132,54 @@
                   "kind": { "type": "string", "enum": ["section", "page"] },
                   "targetId": { "type": ["string", "null"] }
                 }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "financeLedger (templates/FinanceLedgerExtension.ts): block-level atom referencing a ledger stored under {dataRoot}/finance/{ledgerId}/ \u2014 the rows themselves live in that folder's CSV, never in the document.",
+          "if": { "properties": { "type": { "const": "financeLedger" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["ledgerId"],
+                "properties": { "ledgerId": { "type": "string" } }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "financeStats (templates/StatisticsBlockExtension.ts): block-level atom holding only the view configuration; the figures are recomputed from the referenced ledger at render time. An empty ledgerId means 'not yet bound to a ledger' (insertFinanceStats inserts the node with all defaults).",
+          "if": { "properties": { "type": { "const": "financeStats" } }, "required": ["type"] },
+          "then": {
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "properties": {
+                  "ledgerId": { "type": "string" },
+                  "mode": { "type": "string", "enum": ["overall", "category"] },
+                  "from": { "type": "string" },
+                  "to": { "type": "string" },
+                  "categoryFocus": { "type": "string" },
+                  "tagFilter": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "mtgCardLibrary (templates/MtgCardLibraryExtension.ts): block-level atom for the /mtg-cardlibrary view. The collection lives in {dataRoot}/mtg/collection.csv; only the saved filter is persisted here, JSON-encoded as a string (empty string = no saved filter, show everything).",
+          "if": { "properties": { "type": { "const": "mtgCardLibrary" } }, "required": ["type"] },
+          "then": {
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "properties": { "filter": { "type": "string" } }
               }
             }
           }

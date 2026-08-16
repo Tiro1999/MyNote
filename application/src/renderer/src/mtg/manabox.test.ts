@@ -114,7 +114,7 @@ describe('parseManaboxCsv', () => {
   })
 
   it('tolerates a BOM left by Excel', () => {
-    const result = parseManaboxCsv(`﻿${SLIM_EXPORT}`, AT)
+    const result = parseManaboxCsv(`\uFEFF${SLIM_EXPORT}`, AT)
     expect(result.owned).toHaveLength(1)
     expect(result.owned[0].name).toBe('Sol Ring')
   })

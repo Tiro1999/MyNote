@@ -153,6 +153,12 @@ function parseColors(value: string): string[] {
   return [...expanded].filter((char) => COLOR_LETTERS.has(char))
 }
 
+/**
+ * Scryfall's rarity ordering, so `r>=rare` works. Verified against the live API:
+ * `special` sits BELOW `mythic`, which is not the intuitive order.
+ */
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'special', 'mythic', 'bonus']
+
 function compareNumber(actual: number, comparator: Comparator, expected: number): boolean {
   switch (comparator) {
     case '>':
@@ -224,8 +230,18 @@ function matchesTerm(card: EnrichedCard, term: QueryTerm): boolean {
     case 'mv':
       return compareNumber(oracle?.cmc ?? 0, term.comparator, Number(value))
     case 'rarity':
-    case 'r':
-      return (printing?.rarity ?? '').toLowerCase() === value
+    case 'r': {
+      const actual = (printing?.rarity ?? '').toLowerCase()
+      if (term.comparator === ':' || term.comparator === '=') return actual === value
+      const actualRank = RARITY_ORDER.indexOf(actual)
+      const wantedRank = RARITY_ORDER.indexOf(value)
+      // An unknown rarity on either side can't be ordered — don't guess.
+      if (actualRank < 0 || wantedRank < 0) return false
+      return compareNumber(actualRank, term.comparator, wantedRank)
+    }
+    case 'keyword':
+    case 'kw':
+      return (oracle?.keywords ?? []).some((keyword) => keyword.toLowerCase().includes(value))
     case 'set':
     case 's':
     case 'e':
@@ -251,6 +267,12 @@ function matchesTerm(card: EnrichedCard, term: QueryTerm): boolean {
     case 'banned':
       return oracle
         ? decodeLegality(oracle.legalities, value as LegalityFormat) === 'banned'
+        : false
+    case 'restricted':
+      // Vintage's one-copy list (and digital Timeless). Not a ban — the card is
+      // legal, capped at a single copy, so it needs its own operator.
+      return oracle
+        ? decodeLegality(oracle.legalities, value as LegalityFormat) === 'restricted'
         : false
     case 'is':
       switch (value) {
