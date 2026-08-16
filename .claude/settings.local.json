@@ -7,6 +7,10 @@
       "Read(//home/node/.claude/**)",
       "Read(//home/node/.claude/plugins/**)",
       "WebFetch(domain:docs.github.com)"
+    ],
+    "deny": [
+      "Bash(git merge *)",
+      "Bash(git commit *)"
     ]
   }
 }
