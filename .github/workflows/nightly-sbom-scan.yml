@@ -5,8 +5,10 @@ name: Nightly SBOM Scan
 # tagged and built) for known vulnerabilities every night, cross-checking
 # three independent data sources (Grype, OSV.dev via osv-scanner, Trivy) plus
 # npm audit against the GitHub Advisory Database. Findings are written to the
-# job summary and reported in a GitHub issue; the run fails when
-# vulnerabilities are found so the signal is visible in the Actions overview.
+# job summary and reported in a GitHub issue; the run fails when — and only
+# when — vulnerabilities are found, so the signal in the Actions overview means
+# exactly one thing. Archiving the reports is best effort: a full Actions
+# storage quota must never turn a clean scan red.
 
 on:
   schedule:
@@ -16,6 +18,7 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: write # delete superseded scan artifacts (see "Purge" step)
 
 jobs:
   scan:
@@ -60,7 +63,7 @@ jobs:
           if gh release download "$TAG" --pattern 'sbom-*.cdx.json' --output sbom.cdx.json 2>/dev/null; then
             echo "Downloaded SBOM asset from release $TAG"
           else
-            echo "::warning::No SBOM asset downloadable for $TAG (release missing or draft) — regenerating from package-lock.json"
+            echo "::notice::No SBOM asset downloadable for $TAG (release is a draft by design) — regenerating from package-lock.json"
             cd application
             npm version "${TAG#v}" --no-git-tag-version --allow-same-version
             npm sbom --sbom-format cyclonedx --package-lock-only > ../sbom.cdx.json
@@ -192,8 +195,39 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload scan reports
+      # Artifacts are immutable — a later run uploading the same name adds
+      # another copy instead of replacing the old one, so nightly reports pile
+      # up until they expire. Only the newest scan is ever of interest, so drop
+      # the earlier copies first: this workflow then costs one run's worth of
+      # reports rather than one per night.
+      - name: Purge superseded scan artifacts
         if: steps.tag.outputs.found == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+            --jq '.artifacts[]
+                  | select(.expired == false and (.name | startswith("sbom-scan-reports-")))
+                  | "\(.id) \(.name)"' \
+          | while read -r ID NAME; do
+              if gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$ID"; then
+                echo "Deleted superseded artifact $NAME (#$ID)"
+              fi
+            done
+
+      # Archived only when there is something to read: on a clean night every
+      # report is a list of zeros already stated in the summary, and the SBOM is
+      # reproducible from the tag's lockfile at any time. Skipping the upload
+      # keeps the quiet nights — nearly all of them — at zero bytes.
+      #
+      # Best effort even then: the reports are a convenience, the scanner counts
+      # are the result. A failed upload — an exhausted storage quota being the
+      # usual cause — is recorded in the summary and left at that.
+      - name: Upload scan reports
+        id: upload
+        if: steps.tag.outputs.found == 'true' && steps.scan.outputs.count != '0'
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: sbom-scan-reports-${{ steps.tag.outputs.tag }}
@@ -207,7 +241,17 @@ jobs:
             npm-audit-report.txt
             npm-audit-report.json
             sbom.cdx.json
-          retention-days: 30
+          retention-days: 14
+
+      - name: Note unarchived reports
+        if: steps.tag.outputs.found == 'true' && steps.upload.outcome == 'failure'
+        run: |
+          echo "::notice::Scan reports could not be archived (Actions storage quota) — the scan result itself is unaffected."
+          {
+            echo ""
+            echo "> ℹ️ The scan reports could not be uploaded (Actions storage quota)."
+            echo "> The scan itself completed normally; the table above is the full result."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report findings as GitHub issue
         if: steps.tag.outputs.found == 'true' && steps.scan.outputs.count != '0'

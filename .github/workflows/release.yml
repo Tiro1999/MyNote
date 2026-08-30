@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write # delete the hand-off artifacts once the release holds them
 
 jobs:
   build:
@@ -74,6 +75,10 @@ jobs:
             application/dist/*.blockmap
             application/dist/latest*.yml
           if-no-files-found: error
+          # These artifacts are a hand-off to the release job, not an archive:
+          # the installers live on the GitHub Release afterwards. The release
+          # job deletes them; this is the backstop if that ever fails.
+          retention-days: 1
 
       - name: Upload runtime versions
         uses: actions/upload-artifact@v7
@@ -81,6 +86,7 @@ jobs:
           name: runtime-versions-${{ matrix.os }}
           path: application/runtime-versions-${{ matrix.os }}.txt
           if-no-files-found: error
+          retention-days: 1
 
   # The SBOM is derived deterministically from package-lock.json, so it is
   # identical across platforms — generate it once, and make it mandatory:
@@ -121,6 +127,7 @@ jobs:
           name: sbom
           path: application/sbom-${{ github.ref_name }}.cdx.json
           if-no-files-found: error
+          retention-days: 1
 
   release:
     name: Publish GitHub Release
@@ -143,3 +150,22 @@ jobs:
             artifacts/installer-*/**
             artifacts/sbom/**
             artifacts/runtime-versions-*/**
+
+      # Everything is attached to the release now, so the run's artifacts are a
+      # duplicate copy of three Electron installers — by far the largest item in
+      # the Actions storage quota. Release assets are billed separately, so
+      # deleting these costs nothing but frees the quota immediately instead of
+      # waiting out the retention window. Deliberately not `if: always()`: if the
+      # release step failed, the artifacts are the only copy and must survive.
+      - name: Delete hand-off artifacts
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.expired == false) | "\(.id) \(.name)"' \
+          | while read -r ID NAME; do
+              if gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$ID"; then
+                echo "Deleted artifact $NAME (#$ID)"
+              fi
+            done
