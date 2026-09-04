@@ -1,4 +1,4 @@
-import Table from '@tiptap/extension-table'
+import { Table } from '@tiptap/extension-table'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { TextSelection } from '@tiptap/pm/state'
 import { TableMap } from '@tiptap/pm/tables'
