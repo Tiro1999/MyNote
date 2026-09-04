@@ -43,7 +43,11 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: false }),
+      // Tiptap 3's StarterKit bundles Link and Underline; both are registered
+      // separately below (Link needs `openOnClick: false` so ExternalLinkGuard
+      // handles clicks instead), so turn off the bundled copies to avoid
+      // duplicate extensions.
+      StarterKit.configure({ heading: false, link: false, underline: false }),
       HeadingWithId,
       Underline,
       Link.configure({ openOnClick: false }),
