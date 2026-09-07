@@ -1,6 +1,22 @@
 # MyNotes Notebook
 # Version Changelog
 
+------------------------------------------------------------------------------------------
+v0.1.5
+- fix dependency vulnerabilities of packages
+- fix dependency vulnerabilities of packages with breaking changes and migration
+
+------------------------------------------------------------------------------------------
+v0.1.4
+- fix dependency vulnerabilities of packages
+
+------------------------------------------------------------------------------------------
+v0.1.3
+- fix dependency vulnerabilities of packages
+
+------------------------------------------------------------------------------------------
+v0.1.2
+- fix dependency vulnerabilities of packages
 
 ------------------------------------------------------------------------------------------
 v0.1.1
