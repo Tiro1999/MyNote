@@ -5,6 +5,7 @@ import { insertPageHierarchy } from './PageHierarchyBlockExtension'
 import { insertTable } from './TableCommand'
 import { insertFinanceLedger } from './FinanceLedgerExtension'
 import { insertFinanceStats } from './StatisticsBlockExtension'
+import { insertImageCopy, insertImageFromUrl, insertImageLink } from './NotebookImageExtension'
 import type { TemplateCommand } from './types'
 
 /** Extra English/German search keywords per callout variant, in addition to the variant id itself. */
@@ -56,6 +57,39 @@ const STRUCTURE_COMMANDS: TemplateCommand[] = [
   }
 ]
 
+const IMAGE_COMMANDS: TemplateCommand[] = [
+  {
+    id: 'image-copy',
+    title: 'Bild',
+    description: 'Bild auswählen und komprimiert ins Notizbuch kopieren',
+    icon: '🖼️',
+    keywords: ['bild', 'image', 'picture', 'foto', 'photo', 'grafik', 'kopie'],
+    action: (editor, range) => {
+      void insertImageCopy(editor, range)
+    }
+  },
+  {
+    id: 'image-link',
+    title: 'Bildverknüpfung',
+    description: 'Auf eine lokale Bilddatei verweisen, ohne sie zu kopieren',
+    icon: '🔗',
+    keywords: ['bild', 'bildverknüpfung', 'bildlink', 'verknüpfung', 'referenz', 'image link'],
+    action: (editor, range) => {
+      void insertImageLink(editor, range)
+    }
+  },
+  {
+    id: 'image-url',
+    title: 'Bild aus URL',
+    description: 'Bild von einer Webadresse einbinden (wird beim Anzeigen geladen)',
+    icon: '🌐',
+    keywords: ['bild', 'bildurl', 'url', 'web', 'www', 'internet', 'image url'],
+    action: (editor, range) => {
+      void insertImageFromUrl(editor, range)
+    }
+  }
+]
+
 const FINANCE_COMMANDS: TemplateCommand[] = [
   {
     id: 'table-usecase',
@@ -79,7 +113,7 @@ const FINANCE_COMMANDS: TemplateCommand[] = [
 
 /** All available `/` slash commands, in menu order. */
 export function getTemplateCommands(): TemplateCommand[] {
-  return [...CALLOUT_COMMANDS, ...STRUCTURE_COMMANDS, ...FINANCE_COMMANDS]
+  return [...CALLOUT_COMMANDS, ...STRUCTURE_COMMANDS, ...IMAGE_COMMANDS, ...FINANCE_COMMANDS]
 }
 
 /** Filters commands by title or keyword against the typed query (case-insensitive substring match). */

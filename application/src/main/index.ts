@@ -1,9 +1,19 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, clipboard } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, clipboard, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import * as fs from 'fs'
 import * as zlib from 'zlib'
+import { registerAssetProtocol } from './assetProtocol'
+import { fetchRemoteImage, imageCacheDir } from './imageCache'
+
+// Must run before app.whenReady() resolves. `standard` gives the scheme normal
+// host/path URL parsing, `secure` makes it a secure origin so it is allowed on the
+// page, `stream` lets large images stream. Deliberately NOT supportFetchAPI/corsEnabled:
+// only subresource loads (<img src>) may use it, renderer JS must not fetch() through it.
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'asset', privileges: { standard: true, secure: true, stream: true } }
+])
 
 // ─── App settings ───────────────────────────────────────────────────────────
 // Persisted as JSON in the OS-specific userData directory so the main process
@@ -102,6 +112,8 @@ function createWindow(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('io.github.tiro1999.mynote')
 
+  registerAssetProtocol()
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -128,6 +140,25 @@ ipcMain.handle('fs:readFile', async (_, filePath: string) =>
 ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
   await fs.promises.mkdir(join(filePath, '..'), { recursive: true })
   await fs.promises.writeFile(filePath, content, 'utf-8')
+})
+
+// fs:writeFile is utf-8 only — images need raw bytes. Uint8Array survives the
+// structured clone across IPC and is wrapped back into a Buffer here.
+ipcMain.handle('fs:writeBinary', async (_, filePath: string, bytes: Uint8Array) => {
+  await fs.promises.mkdir(join(filePath, '..'), { recursive: true })
+  await fs.promises.writeFile(filePath, Buffer.from(bytes))
+})
+
+// Size + mtime without reading the file: drives the render-cache threshold and
+// the cache key.
+ipcMain.handle('fs:statFile', async (_, filePath: string) => {
+  try {
+    const stats = await fs.promises.stat(filePath)
+    if (!stats.isFile()) return null
+    return { size: stats.size, mtimeMs: stats.mtimeMs }
+  } catch {
+    return null
+  }
 })
 
 ipcMain.handle('fs:readDir', async (_, dirPath: string) => {
@@ -183,6 +214,12 @@ ipcMain.handle(
     return result.canceled ? null : (result.filePath ?? null)
   }
 )
+
+// ─── Image IPC ────────────────────────────────────────────────────────────────
+
+ipcMain.handle('images:cacheDir', (): string => imageCacheDir())
+
+ipcMain.handle('images:fetchRemote', async (_, url: string) => fetchRemoteImage(url))
 
 // ─── .xlsx reading (dependency-free) ──────────────────────────────────────────
 // An .xlsx is a ZIP of XML parts. We locate and inflate just the two parts we

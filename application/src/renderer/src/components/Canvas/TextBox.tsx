@@ -19,7 +19,8 @@ import {
   ExternalLinkGuard,
   TableWithControls,
   FinanceLedger,
-  FinanceStats
+  FinanceStats,
+  NotebookImage
 } from '../../templates'
 import Toolbar from './Toolbar'
 
@@ -63,6 +64,7 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       TableCell,
       FinanceLedger,
       FinanceStats,
+      NotebookImage.configure({ hostElementId: element.id }),
       SlashCommand.configure({ context: { kind: activeContentKind, id: activeContentId } })
     ],
     content: element.content as object,

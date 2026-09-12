@@ -145,6 +145,33 @@ export function getPageTreeChildren(
   return page.children
 }
 
+/**
+ * Absolute folder of the chapter note or page/subpage currently identified by
+ * `kind`/`id` — the folder that holds its `page.json` and its `assets/`.
+ * Exported (and pure) so image import can locate the asset folder without
+ * duplicating the path rules.
+ */
+export function contentDirFor(
+  dataRoot: string,
+  notebooks: Notebook[],
+  kind: 'section' | 'page' | null,
+  id: string | null
+): string | null {
+  if (!kind || !id) return null
+  if (kind === 'section') {
+    for (const notebook of notebooks) {
+      if (notebook.sections.some((section) => section.id === id)) {
+        return `${dataRoot}/${notebook.id}/${id}`
+      }
+    }
+    return null
+  }
+  const location = findPageLocation(notebooks, id)
+  if (!location) return null
+  const idPath = location.chain.map((entry) => entry.id).join('/')
+  return `${dataRoot}/${location.notebook.id}/${location.section.id}/${idPath}`
+}
+
 // ─── Store interface ──────────────────────────────────────────────────────────
 
 interface NotebookStore {
@@ -186,6 +213,11 @@ interface NotebookStore {
   deleteElement: (id: string) => void
 
   savePageContent: () => Promise<void>
+
+  /** Absolute folder of the open chapter note / page, or null if nothing is open. */
+  activeContentDir: () => string | null
+  /** Absolute assets/ folder of the open page, created on demand. Null if nothing is open. */
+  ensureAssetDir: () => Promise<string | null>
 }
 
 // ─── Store implementation ─────────────────────────────────────────────────────
@@ -592,5 +624,21 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
       pageContentPath(dataRoot, location.notebook.id, location.section.id, location.chain),
       JSON.stringify(pageContent, null, 2)
     )
+  },
+
+  activeContentDir: () => {
+    const { dataRoot, notebooks, activeContentKind, activeContentId } = get()
+    if (!dataRoot) return null
+    return contentDirFor(dataRoot, notebooks, activeContentKind, activeContentId)
+  },
+
+  // Pages and subpages get an assets/ folder when they are created, but a chapter's
+  // own note never did — so create it on demand rather than assuming it exists.
+  ensureAssetDir: async () => {
+    const directory = get().activeContentDir()
+    if (!directory) return null
+    const assetDirectory = `${directory}/assets`
+    await fsApi().mkdir(assetDirectory)
+    return assetDirectory
   }
 }))

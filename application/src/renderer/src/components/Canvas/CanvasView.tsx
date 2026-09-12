@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import { nanoid } from 'nanoid'
 import { useNotebookStore } from '../../store/notebookStore'
 import TextBox from './TextBox'
+import ImageBox from './ImageBox'
 import Minimap from './Minimap'
 import type { TextBoxElement } from '../../types'
 
@@ -138,6 +139,22 @@ export default function CanvasView(): JSX.Element {
           if (el.type === 'textbox') {
             return (
               <TextBox
+                key={el.id}
+                element={el}
+                onUpdate={(updates) => {
+                  updateElement(el.id, updates)
+                  savePageContent()
+                }}
+                onDelete={() => {
+                  deleteElement(el.id)
+                  savePageContent()
+                }}
+              />
+            )
+          }
+          if (el.type === 'image') {
+            return (
+              <ImageBox
                 key={el.id}
                 element={el}
                 onUpdate={(updates) => {

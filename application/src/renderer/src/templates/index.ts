@@ -11,6 +11,8 @@ export { PageHierarchyBlock, insertPageHierarchy } from './PageHierarchyBlockExt
 export type { PageHierarchyKind } from './PageHierarchyBlockExtension'
 export { FinanceLedger, insertFinanceLedger } from './FinanceLedgerExtension'
 export { FinanceStats, insertFinanceStats } from './StatisticsBlockExtension'
+export { NotebookImage, insertNotebookImage } from './NotebookImageExtension'
+export type { NotebookImageAttrs, NotebookImageOptions } from './NotebookImageExtension'
 export { SlashCommand, SlashCommandPluginKey } from './SlashCommandExtension'
 export type { SlashCommandOptions } from './SlashCommandExtension'
 export { getTemplateCommands, filterTemplateCommands } from './commands'

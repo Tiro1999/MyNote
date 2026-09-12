@@ -45,10 +45,16 @@ export interface TextBoxElement extends BaseCanvasElement {
   content: Record<string, unknown>
 }
 
+/** Where an image's bytes live: a copy in the page's assets/, a pointer to a local
+ * original, or a web URL. See docs/superpowers/specs/2026-09-12-image-insert-design.md. */
+export type ImageMode = 'copy' | 'link' | 'url'
+
 export interface ImageElement extends BaseCanvasElement {
   type: 'image'
-  /** Relative path inside the page's assets/ folder */
-  assetPath: string
+  /** How `src` is read — see ImageMode. */
+  mode: ImageMode
+  /** Path relative to the page's assets/ (copy), absolute local path (link), or URL. */
+  src: string
   alt: string
 }
 

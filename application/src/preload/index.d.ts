@@ -7,6 +7,8 @@ declare global {
       fs: {
         readFile(filePath: string): Promise<string>
         writeFile(filePath: string, content: string): Promise<void>
+        writeBinary(filePath: string, bytes: Uint8Array): Promise<void>
+        statFile(filePath: string): Promise<{ size: number; mtimeMs: number } | null>
         readDir(dirPath: string): Promise<Array<{ name: string; isDirectory: boolean }>>
         mkdir(dirPath: string): Promise<void>
         exists(path: string): Promise<boolean>
@@ -20,6 +22,13 @@ declare global {
           defaultPath?: string
           filters?: Array<{ name: string; extensions: string[] }>
         }): Promise<string | null>
+      }
+      images: {
+        /** Absolute path of the render-cache directory; created if missing. */
+        cacheDir(): Promise<string>
+        /** Downloads a remote image into the cache. Resolves with an error string
+         * instead of throwing when the URL, type, size or network fails. */
+        fetchRemote(url: string): Promise<{ path: string } | { error: string }>
       }
       xlsx: {
         readSheet(filePath: string): Promise<string[][]>

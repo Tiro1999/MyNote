@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar/Sidebar'
 import CanvasView from './components/Canvas/CanvasView'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
 import ExternalLinkConfirmDialog from './components/Common/ExternalLinkConfirmDialog'
+import ImageUrlDialog from './components/Common/ImageUrlDialog'
 
 export default function App(): JSX.Element {
   const { dataRoot, activeContentId, isDarkMode } = useNotebookStore()
@@ -55,6 +56,7 @@ export default function App(): JSX.Element {
         </div>
       )}
       <ExternalLinkConfirmDialog />
+      <ImageUrlDialog />
     </div>
   )
 }

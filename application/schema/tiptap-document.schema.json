@@ -2,48 +2,117 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mynote.app/schema/tiptap-document.schema.json",
   "title": "MyNote Rich-Text Document (TipTap / ProseMirror JSON)",
-  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign, @tiptap/extension-table + table-row/table-header/table-cell) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink, TocBlock, PageHierarchyBlock, TableWithControls). TocBlock/PageHierarchyBlock are persisted only as their bare type+attrs \u2014 their visible content is computed live at render time from the document/notebook store, not stored on disk. TableWithControls only customizes the table node's editor NodeView (the add-row/add-column '+' buttons); the persisted table/tableRow/tableHeader/tableCell JSON is unchanged from the stock @tiptap/extension-table schema. MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
+  "description": "Schema for the value stored in a TextBoxElement's 'content' field \u2014 a ProseMirror document as produced by editor.getJSON(). Node/mark types are restricted to those actually registered in application/src/renderer/src/components/Canvas/TextBox.tsx (StarterKit minus its built-in heading, HeadingWithId, Underline, Link, TextAlign, @tiptap/extension-table + table-row/table-header/table-cell) plus the custom nodes in application/src/renderer/src/templates/ (Callout, TemplateLink, TocBlock, PageHierarchyBlock, TableWithControls, NotebookImage). TocBlock/PageHierarchyBlock are persisted only as their bare type+attrs \u2014 their visible content is computed live at render time from the document/notebook store, not stored on disk. TableWithControls only customizes the table node's editor NodeView (the add-row/add-column '+' buttons); the persisted table/tableRow/tableHeader/tableCell JSON is unchanged from the stock @tiptap/extension-table schema. MAINTENANCE: update the 'node'/'mark' enums and the matching if/then refinements below whenever TextBox.tsx's extensions array changes.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["type", "content"],
+  "required": [
+    "type",
+    "content"
+  ],
   "properties": {
-    "type": { "const": "doc" },
+    "type": {
+      "const": "doc"
+    },
     "content": {
       "type": "array",
-      "items": { "$ref": "#/$defs/node" }
+      "items": {
+        "$ref": "#/$defs/node"
+      }
     }
   },
   "$defs": {
     "node": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "type": "string", "minLength": 1 },
-        "attrs": { "type": "object" },
-        "content": { "type": "array", "items": { "$ref": "#/$defs/node" } },
-        "text": { "type": "string", "minLength": 1 },
-        "marks": { "type": "array", "items": { "$ref": "#/$defs/mark" } }
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attrs": {
+          "type": "object"
+        },
+        "content": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "marks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mark"
+          }
+        }
       },
       "allOf": [
         {
           "$comment": "text: leaf inline node, requires non-empty 'text', no content.",
-          "if": { "properties": { "type": { "const": "text" } }, "required": ["type"] },
-          "then": { "required": ["text"], "not": { "required": ["content"] } }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "text"
+            ],
+            "not": {
+              "required": [
+                "content"
+              ]
+            }
+          }
         },
         {
           "$comment": "heading: HeadingWithId \u2014 level 1-6, optional slug 'id' assigned on-demand by the table-of-contents command.",
-          "if": { "properties": { "type": { "const": "heading" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "heading"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "required": ["attrs"],
+            "required": [
+              "attrs"
+            ],
             "properties": {
               "attrs": {
                 "type": "object",
-                "required": ["level"],
+                "required": [
+                  "level"
+                ],
                 "properties": {
-                  "level": { "type": "integer", "minimum": 1, "maximum": 6 },
-                  "id": { "type": ["string", "null"] },
-                  "textAlign": { "$ref": "#/$defs/textAlign" }
+                  "level": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "textAlign": {
+                    "$ref": "#/$defs/textAlign"
+                  }
                 }
               }
             }
@@ -51,59 +120,187 @@
         },
         {
           "$comment": "paragraph: TextAlign extension adds an optional 'textAlign' attr.",
-          "if": { "properties": { "type": { "const": "paragraph" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "paragraph"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "attrs": { "type": "object", "properties": { "textAlign": { "$ref": "#/$defs/textAlign" } } }
+              "attrs": {
+                "type": "object",
+                "properties": {
+                  "textAlign": {
+                    "$ref": "#/$defs/textAlign"
+                  }
+                }
+              }
             }
           }
         },
         {
           "$comment": "codeBlock: StarterKit's default code block, optional language attr.",
-          "if": { "properties": { "type": { "const": "codeBlock" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "codeBlock"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "attrs": { "type": "object", "properties": { "language": { "type": ["string", "null"] } } }
+              "attrs": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
             }
           }
         },
         {
           "$comment": "horizontalRule / hardBreak: leaf nodes, no content or text.",
           "if": {
-            "properties": { "type": { "enum": ["horizontalRule", "hardBreak"] } },
-            "required": ["type"]
+            "properties": {
+              "type": {
+                "enum": [
+                  "horizontalRule",
+                  "hardBreak"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
           },
-          "then": { "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] } }
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "content"
+                  ]
+                },
+                {
+                  "required": [
+                    "text"
+                  ]
+                }
+              ]
+            }
+          }
         },
         {
           "$comment": "callout (templates/CalloutExtension.ts): variant enum, requires block+ content (never empty \u2014 insertCallout always seeds one paragraph).",
-          "if": { "properties": { "type": { "const": "callout" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "callout"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "required": ["attrs", "content"],
+            "required": [
+              "attrs",
+              "content"
+            ],
             "properties": {
               "attrs": {
                 "type": "object",
-                "required": ["variant"],
-                "properties": { "variant": { "type": "string", "enum": ["info", "note", "warning", "error"] } }
+                "required": [
+                  "variant"
+                ],
+                "properties": {
+                  "variant": {
+                    "type": "string",
+                    "enum": [
+                      "info",
+                      "note",
+                      "warning",
+                      "error"
+                    ]
+                  }
+                }
               },
-              "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } }
+              "content": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/node"
+                }
+              }
             }
           }
         },
         {
           "$comment": "templateLink (templates/TemplateLinkExtension.ts): inline atom leaf \u2014 no content/text, just attrs.",
-          "if": { "properties": { "type": { "const": "templateLink" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "templateLink"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "required": ["attrs"],
-            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "required": [
+              "attrs"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "content"
+                  ]
+                },
+                {
+                  "required": [
+                    "text"
+                  ]
+                }
+              ]
+            },
             "properties": {
               "attrs": {
                 "type": "object",
-                "required": ["kind", "targetId", "label"],
+                "required": [
+                  "kind",
+                  "targetId",
+                  "label"
+                ],
                 "properties": {
-                  "kind": { "type": "string", "enum": ["heading", "page"] },
-                  "targetId": { "type": "string", "minLength": 1 },
-                  "label": { "type": "string" }
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "heading",
+                      "page"
+                    ]
+                  },
+                  "targetId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -111,26 +308,89 @@
         },
         {
           "$comment": "tocBlock (templates/TocBlockExtension.ts): live table-of-contents block, block-level atom \u2014 no attrs, content or text; its list is computed live from the page's headings at render time, never persisted.",
-          "if": { "properties": { "type": { "const": "tocBlock" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "tocBlock"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "not": {
-              "anyOf": [{ "required": ["attrs"] }, { "required": ["content"] }, { "required": ["text"] }]
+              "anyOf": [
+                {
+                  "required": [
+                    "attrs"
+                  ]
+                },
+                {
+                  "required": [
+                    "content"
+                  ]
+                },
+                {
+                  "required": [
+                    "text"
+                  ]
+                }
+              ]
             }
           }
         },
         {
           "$comment": "pageHierarchyBlock (templates/PageHierarchyBlockExtension.ts): live page/subpage list, block-level atom \u2014 only remembers the anchor (kind + targetId) it was inserted for; the list itself is computed live from the notebook store at render time, never persisted.",
-          "if": { "properties": { "type": { "const": "pageHierarchyBlock" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "pageHierarchyBlock"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "required": ["attrs"],
-            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "required": [
+              "attrs"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "content"
+                  ]
+                },
+                {
+                  "required": [
+                    "text"
+                  ]
+                }
+              ]
+            },
             "properties": {
               "attrs": {
                 "type": "object",
-                "required": ["kind", "targetId"],
+                "required": [
+                  "kind",
+                  "targetId"
+                ],
                 "properties": {
-                  "kind": { "type": "string", "enum": ["section", "page"] },
-                  "targetId": { "type": ["string", "null"] }
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "section",
+                      "page"
+                    ]
+                  },
+                  "targetId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
                 }
               }
             }
@@ -138,38 +398,189 @@
         },
         {
           "$comment": "table (@tiptap/extension-table, wrapped by templates/TableWithControls.ts for the add-row/add-column '+' UI only \u2014 persisted shape is stock): one or more tableRow children.",
-          "if": { "properties": { "type": { "const": "table" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "table"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "required": ["content"],
-            "properties": { "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } } }
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/node"
+                }
+              }
+            }
           }
         },
         {
           "$comment": "tableRow (@tiptap/extension-table-row): one or more tableCell/tableHeader children.",
-          "if": { "properties": { "type": { "const": "tableRow" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "tableRow"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "required": ["content"],
-            "properties": { "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } } }
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/node"
+                }
+              }
+            }
           }
         },
         {
           "$comment": "tableCell / tableHeader (@tiptap/extension-table-cell, @tiptap/extension-table-header): block+ content, colspan/rowspan default 1, optional colwidth array set by column resizing (unused here since resizable: false, but still valid on documents from a future/other client).",
           "if": {
-            "properties": { "type": { "enum": ["tableCell", "tableHeader"] } },
-            "required": ["type"]
+            "properties": {
+              "type": {
+                "enum": [
+                  "tableCell",
+                  "tableHeader"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
           },
           "then": {
-            "required": ["content"],
+            "required": [
+              "content"
+            ],
             "properties": {
               "attrs": {
                 "type": "object",
                 "properties": {
-                  "colspan": { "type": "integer", "minimum": 1 },
-                  "rowspan": { "type": "integer", "minimum": 1 },
-                  "colwidth": { "type": ["array", "null"], "items": { "type": ["integer", "null"] } }
+                  "colspan": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "rowspan": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "colwidth": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  }
                 }
               },
-              "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } }
+              "content": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/node"
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "notebookImage (templates/NotebookImageExtension.ts): block-level atom \u2014 no content/text. Stores only a reference: 'mode' says how 'src' is read (copy = path relative to the page folder, link = absolute local path, url = http(s) address). naturalWidth/naturalHeight are the intrinsic pixel size, used to reserve the layout box before the image loads; width is the chosen display width in px, or null for the intrinsic width.",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "notebookImage"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "attrs"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "content"
+                  ]
+                },
+                {
+                  "required": [
+                    "text"
+                  ]
+                }
+              ]
+            },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": [
+                  "mode",
+                  "src"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "copy",
+                      "link",
+                      "url"
+                    ]
+                  },
+                  "src": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "alt": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1
+                  },
+                  "naturalWidth": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1
+                  },
+                  "naturalHeight": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1
+                  }
+                }
+              }
             }
           }
         }
@@ -178,26 +589,70 @@
     "mark": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "type": "string", "enum": ["bold", "italic", "strike", "code", "underline", "link"] },
-        "attrs": { "type": "object" }
+        "type": {
+          "type": "string",
+          "enum": [
+            "bold",
+            "italic",
+            "strike",
+            "code",
+            "underline",
+            "link"
+          ]
+        },
+        "attrs": {
+          "type": "object"
+        }
       },
       "allOf": [
         {
           "$comment": "link mark (extension-link): href is the only attribute the app itself sets via setLink({ href }).",
-          "if": { "properties": { "type": { "const": "link" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "link"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "required": ["attrs"],
+            "required": [
+              "attrs"
+            ],
             "properties": {
               "attrs": {
                 "type": "object",
-                "required": ["href"],
+                "required": [
+                  "href"
+                ],
                 "properties": {
-                  "href": { "type": "string" },
-                  "target": { "type": ["string", "null"] },
-                  "rel": { "type": ["string", "null"] },
-                  "class": { "type": ["string", "null"] }
+                  "href": {
+                    "type": "string"
+                  },
+                  "target": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "rel": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "class": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
                 }
               }
             }
@@ -206,8 +661,17 @@
       ]
     },
     "textAlign": {
-      "type": ["string", "null"],
-      "enum": ["left", "center", "right", "justify", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "left",
+        "center",
+        "right",
+        "justify",
+        null
+      ]
     }
   }
 }

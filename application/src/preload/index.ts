@@ -7,6 +7,10 @@ const api = {
       ipcRenderer.invoke('fs:readFile', filePath),
     writeFile: (filePath: string, content: string): Promise<void> =>
       ipcRenderer.invoke('fs:writeFile', filePath, content),
+    writeBinary: (filePath: string, bytes: Uint8Array): Promise<void> =>
+      ipcRenderer.invoke('fs:writeBinary', filePath, bytes),
+    statFile: (filePath: string): Promise<{ size: number; mtimeMs: number } | null> =>
+      ipcRenderer.invoke('fs:statFile', filePath),
     readDir: (dirPath: string): Promise<Array<{ name: string; isDirectory: boolean }>> =>
       ipcRenderer.invoke('fs:readDir', dirPath),
     mkdir: (dirPath: string): Promise<void> =>
@@ -29,6 +33,11 @@ const api = {
       defaultPath?: string
       filters?: Array<{ name: string; extensions: string[] }>
     }): Promise<string | null> => ipcRenderer.invoke('dialog:saveFile', options)
+  },
+  images: {
+    cacheDir: (): Promise<string> => ipcRenderer.invoke('images:cacheDir'),
+    fetchRemote: (url: string): Promise<{ path: string } | { error: string }> =>
+      ipcRenderer.invoke('images:fetchRemote', url)
   },
   xlsx: {
     readSheet: (filePath: string): Promise<string[][]> =>

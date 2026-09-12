@@ -5,7 +5,10 @@
   "description": "Canvas content of a single chapter note, page, or subpage \u2014 stored at '{folder}/page.json'. 'folder' is '{dataRoot}/{notebookId}/{sectionId}/page.json' for a chapter's own note, or '{dataRoot}/{notebookId}/{sectionId}/{...subpageIdChain}/page.json' for a page/subpage. Mirrors PageContent / AnyCanvasElement in application/src/renderer/src/types/index.ts.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["pageId", "elements"],
+  "required": [
+    "pageId",
+    "elements"
+  ],
   "properties": {
     "pageId": {
       "type": "string",
@@ -15,29 +18,63 @@
     "elements": {
       "type": "array",
       "description": "Free-canvas elements, each absolutely positioned via x/y/width/height/zIndex.",
-      "items": { "$ref": "#/$defs/canvasElement" }
+      "items": {
+        "$ref": "#/$defs/canvasElement"
+      }
     }
   },
   "$defs": {
     "canvasElement": {
       "oneOf": [
-        { "$ref": "#/$defs/textBoxElement" },
-        { "$ref": "#/$defs/imageElement" },
-        { "$ref": "#/$defs/fileElement" }
+        {
+          "$ref": "#/$defs/textBoxElement"
+        },
+        {
+          "$ref": "#/$defs/imageElement"
+        },
+        {
+          "$ref": "#/$defs/fileElement"
+        }
       ]
     },
     "textBoxElement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "x", "y", "width", "height", "zIndex", "content"],
+      "required": [
+        "id",
+        "type",
+        "x",
+        "y",
+        "width",
+        "height",
+        "zIndex",
+        "content"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "type": { "const": "textbox" },
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "width": { "type": "number", "minimum": 0 },
-        "height": { "type": "number", "minimum": 0 },
-        "zIndex": { "type": "number" },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "textbox"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "zIndex": {
+          "type": "number"
+        },
         "content": {
           "$ref": "tiptap-document.schema.json",
           "description": "TipTap ProseMirror JSON document, see tiptap-document.schema.json."
@@ -47,41 +84,110 @@
     "imageElement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "x", "y", "width", "height", "zIndex", "assetPath", "alt"],
+      "required": [
+        "id",
+        "type",
+        "x",
+        "y",
+        "width",
+        "height",
+        "zIndex",
+        "mode",
+        "src",
+        "alt"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "type": { "const": "image" },
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "width": { "type": "number", "minimum": 0 },
-        "height": { "type": "number", "minimum": 0 },
-        "zIndex": { "type": "number" },
-        "assetPath": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "image"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "zIndex": {
+          "type": "number"
+        },
+        "alt": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "copy",
+            "link",
+            "url"
+          ],
+          "description": "How 'src' is read: a copy inside this page's assets/, a pointer to a local original, or a web address."
+        },
+        "src": {
           "type": "string",
           "minLength": 1,
-          "description": "Path relative to this page's own 'assets/' subfolder."
-        },
-        "alt": { "type": "string" }
+          "description": "Path relative to this page's own 'assets/' folder (copy), absolute local path (link), or http(s) URL (url)."
+        }
       }
     },
     "fileElement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "x", "y", "width", "height", "zIndex", "assetPath", "fileName"],
+      "required": [
+        "id",
+        "type",
+        "x",
+        "y",
+        "width",
+        "height",
+        "zIndex",
+        "assetPath",
+        "fileName"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "type": { "const": "file" },
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "width": { "type": "number", "minimum": 0 },
-        "height": { "type": "number", "minimum": 0 },
-        "zIndex": { "type": "number" },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "file"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "zIndex": {
+          "type": "number"
+        },
         "assetPath": {
           "type": "string",
           "minLength": 1,
           "description": "Path relative to this page's own 'assets/' subfolder."
         },
-        "fileName": { "type": "string", "minLength": 1 }
+        "fileName": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   }
