@@ -2,6 +2,10 @@
 # Version Changelog
 
 ------------------------------------------------------------------------------------------
+v0.1.6
+- fix dependency vulnerabilities of packages
+
+------------------------------------------------------------------------------------------
 v0.1.5
 - fix dependency vulnerabilities of packages
 - fix dependency vulnerabilities of packages with breaking changes and migration
