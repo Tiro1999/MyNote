@@ -2,6 +2,14 @@
 # Version Changelog
 
 ------------------------------------------------------------------------------------------
+coming soon
+- add /Bild slash command: pick an image file and insert a compressed WebP copy into the notebook
+- add /Bildverknüpfung: reference a local image file without copying it
+- add /Bild aus URL: embed a web image, loaded only after the user allows external images
+- add free canvas images - an inserted image can be detached from its text box and placed anywhere
+- images are stored as references only; a render cache keeps large originals from slowing the canvas
+
+------------------------------------------------------------------------------------------
 v0.1.6
 - fix dependency vulnerabilities of packages
 
