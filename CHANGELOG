@@ -1,28 +1,46 @@
 # MyNotes Notebook
+
 # Version Changelog
 
-------------------------------------------------------------------------------------------
-v0.1.6
+---
+
+v0.1.7
+
 - fix dependency vulnerabilities of packages
 
-------------------------------------------------------------------------------------------
+---
+
+v0.1.6
+
+- fix dependency vulnerabilities of packages
+
+---
+
 v0.1.5
+
 - fix dependency vulnerabilities of packages
 - fix dependency vulnerabilities of packages with breaking changes and migration
 
-------------------------------------------------------------------------------------------
+---
+
 v0.1.4
+
 - fix dependency vulnerabilities of packages
 
-------------------------------------------------------------------------------------------
+---
+
 v0.1.3
+
 - fix dependency vulnerabilities of packages
 
-------------------------------------------------------------------------------------------
+---
+
 v0.1.2
+
 - fix dependency vulnerabilities of packages
 
-------------------------------------------------------------------------------------------
+---
+
 v0.1.1
 
 - date: 09.07.2026
@@ -31,11 +49,12 @@ v0.1.1
 - add finance statistics on backslash command
 - add table interactive user adjustments
 - add table finance ledger template with ledger id for reference in statistics
-- add financial import/export data functionality 
-- add [Money Manager App](https://www.realbyteapps.com/) 
-- fixed render issues/freezes on larger data imports from Money Manager Data 
+- add financial import/export data functionality
+- add [Money Manager App](https://www.realbyteapps.com/)
+- fixed render issues/freezes on larger data imports from Money Manager Data
 
--------------------------------------------------------------------------------------------
+---
+
 v0.1.0
 
 - date: 04.07.2026
@@ -44,4 +63,4 @@ v0.1.0
 - Hyperlinks are supported in the content view.
 - SBOM tracking is included for all dependencies.
 
--------------------------------------------------------------------------------------------
+---
