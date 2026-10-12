@@ -4,6 +4,15 @@
 
 ---
 
+v0.1.8
+
+- fix dependency vulnerabilities of packages
+- migrate to tailwind v4
+- override @electron/get to v5
+- security patch
+
+---
+
 v0.1.7
 
 - fix dependency vulnerabilities of packages
