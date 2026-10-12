@@ -49,7 +49,7 @@ export default function ColumnConfigPopover({
           <label className="mt-3 block text-xs">
             Typ
             <select
-              className="mt-1 block w-full rounded border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+              className="mt-1 block w-full rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
               value={type}
               onChange={(e) => onChange({ ...value, type: e.target.value as ColumnType })}
             >
@@ -66,7 +66,7 @@ export default function ColumnConfigPopover({
             {ALIGNS.map((a) => (
               <button
                 key={a}
-                className={`flex-1 rounded border px-2 py-1 ${
+                className={`flex-1 rounded-sm border px-2 py-1 ${
                   (value.align ?? 'left') === a
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
                     : 'border-gray-300 dark:border-gray-700'
@@ -87,7 +87,7 @@ export default function ColumnConfigPopover({
                 type="number"
                 min={0}
                 max={4}
-                className="w-16 rounded border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+                className="w-16 rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
                 value={number.decimals}
                 onChange={(e) =>
                   onChange({ ...value, number: { ...number, decimals: Number(e.target.value) } })
@@ -107,7 +107,7 @@ export default function ColumnConfigPopover({
             <label className="flex items-center justify-between">
               Währungssymbol
               <input
-                className="w-16 rounded border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+                className="w-16 rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
                 value={number.currencySymbol}
                 onChange={(e) =>
                   onChange({ ...value, number: { ...number, currencySymbol: e.target.value } })
@@ -117,7 +117,7 @@ export default function ColumnConfigPopover({
             <label className="flex items-center justify-between">
               Symbolposition
               <select
-                className="rounded border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+                className="rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
                 value={number.symbolPosition}
                 onChange={(e) =>
                   onChange({
@@ -137,7 +137,7 @@ export default function ColumnConfigPopover({
           <label className="mt-3 block text-xs">
             Datumsformat
             <select
-              className="mt-1 block w-full rounded border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+              className="mt-1 block w-full rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
               value={date.pattern}
               onChange={(e) =>
                 onChange({ ...value, date: { pattern: e.target.value as typeof date.pattern } })

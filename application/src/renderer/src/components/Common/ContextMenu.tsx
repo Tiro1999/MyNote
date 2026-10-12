@@ -34,7 +34,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props): JSX.Elemen
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[9rem] rounded-lg border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+      className="fixed z-50 min-w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-900"
       style={{ left: x, top: y }}
     >
       {items.map((item) => (

@@ -55,7 +55,7 @@ export default function Minimap({ elements, viewport, onNavigate }: Props): JSX.
   return (
     <div
       ref={ref}
-      className="relative cursor-pointer overflow-hidden rounded border border-gray-300 bg-white/80 shadow-sm dark:border-gray-700 dark:bg-gray-800/80"
+      className="relative cursor-pointer overflow-hidden rounded-sm border border-gray-300 bg-white/80 shadow-xs dark:border-gray-700 dark:bg-gray-800/80"
       style={{ width: MAP_W, height: MAP_H }}
       title="Übersicht — klicken/ziehen zum Navigieren"
       onMouseDown={(e) => {

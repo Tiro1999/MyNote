@@ -50,7 +50,7 @@ export default function ExternalLinkConfirmDialog(): JSX.Element | null {
             type="checkbox"
             checked={rememberChoice}
             onChange={(e) => setRememberChoice(e.target.checked)}
-            className="rounded border-gray-300 dark:border-gray-600"
+            className="rounded-sm border-gray-300 dark:border-gray-600"
           />
           Don&apos;t ask again and remember my choice
         </label>

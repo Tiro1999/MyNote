@@ -91,7 +91,7 @@ export default function ImportDialog({ open, onClose, ledgerId }: Props): JSX.El
         <label className="mt-4 block text-sm text-gray-700 dark:text-gray-200">
           Quelle
           <select
-            className="mt-1 block w-full rounded border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+            className="mt-1 block w-full rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
             value={source}
             onChange={(e) => setSource(e.target.value as Source)}
           >
@@ -101,7 +101,7 @@ export default function ImportDialog({ open, onClose, ledgerId }: Props): JSX.El
         </label>
 
         {result && (
-          <div className="mt-3 rounded bg-gray-100 p-2 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <div className="mt-3 rounded-sm bg-gray-100 p-2 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
             {result}
           </div>
         )}

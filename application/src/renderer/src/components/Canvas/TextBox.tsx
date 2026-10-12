@@ -136,10 +136,10 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       onMouseDown={handleBoxMouseDown}
     >
       <div
-        className={`flex h-full w-full flex-col overflow-hidden rounded border bg-white text-gray-900 transition-shadow dark:bg-gray-900 dark:text-gray-100 ${
+        className={`flex h-full w-full flex-col overflow-hidden rounded-sm border bg-white text-gray-900 transition-shadow dark:bg-gray-900 dark:text-gray-100 ${
           focused
             ? 'border-blue-400 shadow-lg ring-1 ring-blue-300 dark:border-blue-500 dark:ring-blue-500/60'
-            : 'border-transparent hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-700'
+            : 'border-transparent hover:border-gray-300 hover:shadow-xs dark:hover:border-gray-700'
         }`}
         onClick={() => {
           if (!didMove.current) setFocused(true)
