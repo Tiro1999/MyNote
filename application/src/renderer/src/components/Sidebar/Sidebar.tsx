@@ -105,7 +105,7 @@ export default function Sidebar(): JSX.Element {
                 }
               >
                 <span
-                  className="w-3 h-3 rounded-sm shrink-0"
+                  className="w-3 h-3 rounded-xs shrink-0"
                   style={{ backgroundColor: nb.color }}
                 />
                 <span className="truncate">{nb.name}</span>
@@ -271,7 +271,7 @@ function SectionList({
                 onClick={() => onSectionClick(section.id)}
               >
                 <span
-                  className="w-2 h-2 rounded-sm shrink-0"
+                  className="w-2 h-2 rounded-xs shrink-0"
                   style={{ backgroundColor: section.color }}
                 />
                 <span className="truncate">{section.name}</span>

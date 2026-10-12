@@ -172,20 +172,20 @@ export default function CanvasView(): JSX.Element {
         )}
         <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-300">
           <button
-            className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            className="rounded-sm border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
             onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}
           >
             −
           </button>
           <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
           <button
-            className="rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            className="rounded-sm border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
             onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}
           >
             +
           </button>
           <button
-            className="ml-1 rounded border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            className="ml-1 rounded-sm border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
             onClick={() => {
               setZoom(1)
               setPan({ x: 40, y: 40 })

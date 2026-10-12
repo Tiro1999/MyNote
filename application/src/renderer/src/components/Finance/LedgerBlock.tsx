@@ -30,7 +30,7 @@ const emptyDraft = (): Omit<Entry, 'id' | 'pos'> => ({
 })
 
 const cell = 'px-2 py-0.5 align-middle whitespace-nowrap'
-const field = 'bg-transparent [field-sizing:content] min-w-[3.5rem] max-w-[24rem]'
+const field = 'bg-transparent field-sizing-content min-w-14 max-w-[24rem]'
 const selectField = 'bg-transparent max-w-[24rem]'
 
 // Above this many rows the grid paginates so it never renders thousands of
@@ -218,25 +218,25 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
           </span>
           <div className="flex items-center gap-2">
             <button
-              className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              className="rounded-sm border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
               onClick={() => setImportOpen(true)}
             >
               Import
             </button>
             <button
-              className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              className="rounded-sm border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
               onClick={handleExport}
             >
               Export
             </button>
             <button
-              className="rounded border border-gray-300 px-2 py-1 text-xs text-blue-600 hover:bg-gray-50 dark:border-gray-700 dark:text-blue-400 dark:hover:bg-gray-800"
+              className="rounded-sm border border-gray-300 px-2 py-1 text-xs text-blue-600 hover:bg-gray-50 dark:border-gray-700 dark:text-blue-400 dark:hover:bg-gray-800"
               onClick={() => setRefOpen(true)}
             >
               Konten/Kategorien verwalten
             </button>
             <button
-              className="rounded border border-gray-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-gray-700 dark:hover:bg-red-950"
+              className="rounded-sm border border-gray-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-gray-700 dark:hover:bg-red-950"
               onClick={handleDeleteLedger}
             >
               Ledger löschen
@@ -479,7 +479,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
               <tr>
                 <td colSpan={10} className="px-2 pt-2">
                   <button
-                    className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
+                    className="rounded-sm bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
                     onClick={submit}
                   >
                     + Buchung hinzufügen

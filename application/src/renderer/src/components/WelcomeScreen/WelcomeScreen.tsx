@@ -36,7 +36,7 @@ export default function WelcomeScreen(): JSX.Element {
           disk, a network drive (NAS), or a cloud-synced folder.
         </p>
         <button
-          className="rounded-lg bg-blue-600 px-8 py-3 text-base font-medium text-white shadow-sm transition-colors hover:bg-blue-700 active:bg-blue-800"
+          className="rounded-lg bg-blue-600 px-8 py-3 text-base font-medium text-white shadow-xs transition-colors hover:bg-blue-700 active:bg-blue-800"
           onClick={handleOpen}
         >
           Open or Create Notebook Folder

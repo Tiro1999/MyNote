@@ -103,7 +103,7 @@ export default function SettingsDialog({ open, onClose }: Props): JSX.Element | 
               } ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
             >
               <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
                   autoUpdate ? 'translate-x-5' : 'translate-x-0.5'
                 }`}
               />

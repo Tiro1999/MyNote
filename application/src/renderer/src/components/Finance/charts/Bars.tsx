@@ -16,8 +16,8 @@ export default function Bars({
           <span className="w-40 truncate" title={d.label}>
             {d.label}
           </span>
-          <div className="h-3 flex-1 rounded bg-gray-100 dark:bg-gray-800">
-            <div className="h-3 rounded bg-blue-500" style={{ width: `${(d.value / max) * 100}%` }} />
+          <div className="h-3 flex-1 rounded-sm bg-gray-100 dark:bg-gray-800">
+            <div className="h-3 rounded-sm bg-blue-500" style={{ width: `${(d.value / max) * 100}%` }} />
           </div>
           <span className="w-24 text-right tabular-nums">{formatCents(d.value, symbol)}</span>
         </div>

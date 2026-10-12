@@ -64,10 +64,10 @@ export default function Pie({
         {slices.map((d, i) => (
           <li key={d.label} className="flex items-center gap-1.5">
             <span
-              className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+              className="inline-block h-2.5 w-2.5 shrink-0 rounded-xs"
               style={{ backgroundColor: COLORS[i % COLORS.length] }}
             />
-            <span className="max-w-[14rem] truncate" title={d.label}>
+            <span className="max-w-56 truncate" title={d.label}>
               {d.label}
             </span>
             <span className="tabular-nums text-gray-500">{formatCents(d.value, symbol)}</span>

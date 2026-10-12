@@ -29,7 +29,7 @@ function CategoryEditor({
         <li key={i} className="mt-1">
           <div className="flex items-center gap-2">
             <input
-              className="rounded border border-gray-300 bg-transparent px-1 text-sm dark:border-gray-700"
+              className="rounded-sm border border-gray-300 bg-transparent px-1 text-sm dark:border-gray-700"
               value={node.name}
               onChange={(e) => update(i, { ...node, name: e.target.value.replace(/\//g, '') })}
             />
@@ -98,7 +98,7 @@ export default function ReferenceDataDialog({ open, onClose }: Props): JSX.Eleme
         {draftAccounts.map((acc, i) => (
           <div key={acc.id} className="mt-2 flex items-center gap-2">
             <input
-              className="flex-1 rounded border border-gray-300 bg-transparent px-2 py-1 text-sm dark:border-gray-700"
+              className="flex-1 rounded-sm border border-gray-300 bg-transparent px-2 py-1 text-sm dark:border-gray-700"
               value={acc.name}
               placeholder="Kontoname"
               onChange={(e) =>
@@ -108,7 +108,7 @@ export default function ReferenceDataDialog({ open, onClose }: Props): JSX.Eleme
               }
             />
             <input
-              className="w-28 rounded border border-gray-300 bg-transparent px-2 py-1 text-sm dark:border-gray-700"
+              className="w-28 rounded-sm border border-gray-300 bg-transparent px-2 py-1 text-sm dark:border-gray-700"
               value={acc.openingBalance}
               placeholder="Startsaldo"
               onChange={(e) =>

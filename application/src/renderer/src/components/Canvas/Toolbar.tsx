@@ -42,7 +42,7 @@ export default function Toolbar({ editor }: Props): JSX.Element {
   }) => (
     <button
       title={title}
-      className={`px-1.5 py-0.5 rounded text-xs font-medium transition-colors ${
+      className={`px-1.5 py-0.5 rounded-sm text-xs font-medium transition-colors ${
         active
           ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
           : 'text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -110,7 +110,7 @@ export default function Toolbar({ editor }: Props): JSX.Element {
         {/* Link insertion */}
         <button
           title="Insert link (🔗)"
-          className={`rounded px-1.5 py-0.5 text-xs transition-colors ${
+          className={`rounded-sm px-1.5 py-0.5 text-xs transition-colors ${
             linkDialog.phase !== 'idle'
               ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
               : 'text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -135,19 +135,19 @@ export default function Toolbar({ editor }: Props): JSX.Element {
           {linkDialog.phase === 'choose' && (
             <div className="flex gap-1">
               <button
-                className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                className="rounded-sm bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                 onMouseDown={(e) => { e.preventDefault(); handlePickFile() }}
               >
                 📁 File
               </button>
               <button
-                className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                className="rounded-sm bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                 onMouseDown={(e) => { e.preventDefault(); setLinkDialog({ phase: 'url', value: '' }) }}
               >
                 🌐 URL
               </button>
               <button
-                className="rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                className="rounded-sm px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
                 onMouseDown={(e) => { e.preventDefault(); setLinkDialog({ phase: 'idle' }) }}
               >
                 ✕
@@ -163,16 +163,16 @@ export default function Toolbar({ editor }: Props): JSX.Element {
                 value={linkDialog.value}
                 onChange={(e) => setLinkDialog({ phase: 'url', value: e.target.value })}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmUrl() }}
-                className="w-48 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs outline-none focus:border-blue-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                className="w-48 rounded-sm border border-gray-300 bg-white px-2 py-0.5 text-xs outline-hidden focus:border-blue-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
               />
               <button
-                className="rounded bg-blue-500 px-2 py-0.5 text-xs text-white hover:bg-blue-600"
+                className="rounded-sm bg-blue-500 px-2 py-0.5 text-xs text-white hover:bg-blue-600"
                 onMouseDown={(e) => { e.preventDefault(); handleConfirmUrl() }}
               >
                 OK
               </button>
               <button
-                className="rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                className="rounded-sm px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
                 onMouseDown={(e) => { e.preventDefault(); setLinkDialog({ phase: 'idle' }) }}
               >
                 ✕
