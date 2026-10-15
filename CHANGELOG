@@ -4,6 +4,12 @@
 
 ---
 
+v0.1.9
+
+- ci-fix dependency SBOM generation oxide-wasm32-wasi in lockfile
+
+---
+
 v0.1.8
 
 - fix dependency vulnerabilities of packages
