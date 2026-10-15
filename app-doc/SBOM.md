@@ -22,6 +22,28 @@ npm sbom --sbom-format cyclonedx --package-lock-only > sbom-local.cdx.json
 
 Requires npm ≥ 11 (ships with Node 26+). See [`runtime-versions.md`](./runtime-versions.md) for pinned version details.
 
+### Troubleshooting: `ESBOMPROBLEMS` / `missing: … required by @tailwindcss/oxide-wasm32-wasi`
+
+`@tailwindcss/oxide-wasm32-wasi` is an optional platform package that **bundles** its
+dependencies (`bundleDependencies`). npm only records bundled deps in the lockfile when it
+actually extracts the tarball — which never happens on x64/arm64 machines. `npm sbom
+--package-lock-only` then sees unresolved edges and aborts. CI runs the same check, so this
+surfaces in the PR, not on the release tag.
+
+Fix: re-resolve the lockfile once *as if* on wasm32, which records the bundled entries
+(`node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/*`) without changing anything else:
+
+```bash
+cd application
+npm install --ignore-scripts --cpu=wasm32
+npm ci                          # restore the normal node_modules for this platform
+```
+
+Normal `npm install`/`npm ci` keep these entries. They are typically lost again when the
+Tailwind version changes, so repeat the fix after a Tailwind upgrade if CI flags it.
+Do **not** use `npm sbom --omit=optional` as a workaround — it also drops non-optional
+packages (`@tiptap/pm`, `prosemirror-*`, `undici`, …) from the SBOM.
+
 ## Release artifact naming
 
 | File | Description |
