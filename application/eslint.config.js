@@ -1,6 +1,4 @@
-// Flat config (ESLint 9+/10). Replaces the former .eslintrc.cjs.
-// Scoped to .ts/.tsx so `eslint .` lints the same files the old
-// `eslint . --ext .ts,.tsx` script did.
+// Rules cover .ts/.tsx; globals and no-console are set per process below.
 const js = require('@eslint/js')
 const tsParser = require('@typescript-eslint/parser')
 const tsPlugin = require('@typescript-eslint/eslint-plugin')
@@ -18,10 +16,6 @@ module.exports = [
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: { jsx: true }
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node
       }
     },
     plugins: {
@@ -36,18 +30,32 @@ module.exports = [
       ...js.configs.recommended.rules,
       ...tsPlugin.configs.recommended.rules,
       ...reactPlugin.configs.recommended.rules,
-      // react-hooks recommended (inlined so it is independent of the
-      // plugin's flat/eslintrc config export shape across versions)
+      // react-hooks recommended, inlined so it does not depend on the plugin's config export shape
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // TypeScript handles undefined-symbol checking itself; the core
-      // no-undef rule misfires on type-only refs like `JSX`/`React`.
-      // (@typescript-eslint/recommended disabled this via eslint-recommended.)
+      // TypeScript checks undefined names; the core rule misfires on type-only refs like JSX
       'no-undef': 'off',
-      // project overrides carried over verbatim from .eslintrc.cjs
+      'no-console': 'error',
       'react/react-in-jsx-scope': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
     }
+  },
+  {
+    files: ['src/main/**', 'src/preload/**', '*.{js,ts}'],
+    languageOptions: { globals: globals.node }
+  },
+  {
+    files: ['src/renderer/**'],
+    languageOptions: { globals: globals.browser }
+  },
+  {
+    files: ['src/shared/log.ts'],
+    rules: { 'no-console': 'off' }
+  },
+  // Temporary: main and preload still call console directly
+  {
+    files: ['src/main/**', 'src/preload/**'],
+    rules: { 'no-console': 'off' }
   }
 ]

@@ -93,4 +93,4 @@ cd application
 npm sbom --sbom-format cyclonedx --package-lock-only > sbom-vX.Y.Z.cdx.json
 ```
 
-See [`SBOM.md`](./SBOM.md) for the full policy.
+See [`SBOM.md`](./sbom.md) for the full policy.

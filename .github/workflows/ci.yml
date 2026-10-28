@@ -2,14 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'application/**'
       - '.github/workflows/ci.yml'
+      - '.nvmrc'
   pull_request:
     branches: [main]
     paths:
       - 'application/**'
+      - '.github/workflows/ci.yml'
+      - '.nvmrc'
+
+permissions:
+  contents: read
 
 jobs:
   quality:
@@ -21,6 +27,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v5
         with:
@@ -32,10 +40,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Same command as the Release workflow's mandatory SBOM job — fail here
-      # instead of on the tag. Typical cause: an optional platform package with
-      # bundleDependencies (e.g. @tailwindcss/oxide-wasm32-wasi) whose bundled
-      # deps are missing from the lockfile; see documentation/software/build/sbom.md.
+      # Same command as the mandatory release SBOM job, so it fails here and not on the tag; see documentation/software/build/sbom.md
       - name: Check SBOM generation
         run: npm sbom --sbom-format cyclonedx --package-lock-only > /dev/null
 
@@ -45,12 +50,13 @@ jobs:
       - name: TypeCheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 
-      # CI is a pure quality gate: it proves the code lints, type-checks and
-      # builds. It intentionally produces no downloadable artifact — installable
-      # binaries come only from the Release workflow (on a version tag).
+      # Quality gate only, no artifacts: installers come from release.yml; see documentation/software/build/build-and-release.md
       - name: Record runtime versions (log only)
         run: |
           echo "node=$(node --version)"

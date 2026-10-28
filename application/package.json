@@ -1,7 +1,9 @@
 {
   "name": "mynote",
   "version": "0.1.0",
+  "private": true,
   "description": "A highly customizable personal notebook application",
+  "author": "Tiro1999",
   "main": "out/main/index.js",
   "engines": {
     "node": ">=26.0.0",
@@ -13,11 +15,12 @@
     "dev": "npm run ensure:electron && electron-vite dev",
     "dev:container": "npm run ensure:electron && ./scripts/dev-container.sh",
     "build": "electron-vite build",
+    "build:experimental": "electron-vite build --mode experimental",
     "dist": "npm run build && electron-builder --publish never",
     "dist:win": "npm run build && electron-builder --win --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:linux": "npm run build && electron-builder --linux --publish never",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "test:watch": "vitest"

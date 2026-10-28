@@ -1,19 +1,16 @@
 import type { Configuration } from 'electron-builder'
+import { APP_ID } from './src/shared/app'
 
 const config: Configuration = {
-  appId: 'io.github.tiro1999.mynote',
+  appId: APP_ID,
   productName: 'MyNote',
-  copyright: 'Copyright © 2026',
+  copyright: 'Copyright © 2026 Tiro1999',
   directories: {
     buildResources: 'build',
     output: 'dist'
   },
   files: ['out/**'],
-  // GitHub Releases is the update feed. This makes electron-builder emit the
-  // update metadata (latest.yml / latest-linux.yml / latest-mac.yml + blockmaps)
-  // next to the installers so electron-updater can find new versions. Actual
-  // uploading is done by the Release workflow (build runs with --publish never),
-  // so nothing is pushed until you publish the draft release yourself.
+  // Update feed for electron-updater; release.yml uploads it, see documentation/software/build/build-and-release.md
   publish: [
     {
       provider: 'github',

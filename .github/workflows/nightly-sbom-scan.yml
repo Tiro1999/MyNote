@@ -1,34 +1,26 @@
 name: Nightly SBOM Scan
 
-# Scans the SBOM of the latest release tag (by semver, regardless of the
-# GitHub Release's draft status — releases here are never published, only
-# tagged and built) for known vulnerabilities every night, cross-checking
-# three independent data sources (Grype, OSV.dev via osv-scanner, Trivy) plus
-# npm audit against the GitHub Advisory Database. Findings are written to the
-# job summary and reported in a GitHub issue; the run fails when — and only
-# when — vulnerabilities are found, so the signal in the Actions overview means
-# exactly one thing. Archiving the reports is best effort: a full Actions
-# storage quota must never turn a clean scan red.
+# Scans the latest release tag's SBOM nightly and fails only on findings; see documentation/software/build/sbom.md
 
 on:
   schedule:
     - cron: '17 3 * * *' # daily, 03:17 UTC
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
-  actions: write # delete superseded scan artifacts (see "Purge" step)
-
 jobs:
   scan:
     name: Scan latest release SBOM
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      actions: write # delete superseded scan artifacts (see "Purge" step)
 
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # full history — needed to list release tags
+          persist-credentials: false
 
       - name: Resolve latest release tag
         id: tag
@@ -50,10 +42,7 @@ jobs:
           node-version-file: '.nvmrc'
           check-latest: true
 
-      # Prefer the SBOM asset attached to the (published) release; fall back to
-      # regenerating it from the tag's package-lock.json — npm sbom is
-      # deterministic from the lockfile, so the result describes the same
-      # dependency set (e.g. while the release is still a draft).
+      # Release asset first, else regenerated from the tag's lockfile (same result); see documentation/software/build/sbom.md
       - name: Obtain SBOM for ${{ steps.tag.outputs.tag }}
         if: steps.tag.outputs.found == 'true'
         env:
@@ -92,10 +81,7 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$HOME/.local/bin"
           "$HOME/.local/bin/trivy" version
 
-      # Each tool draws from a different upstream vulnerability feed (Grype:
-      # NVD + vendor feeds, OSV-Scanner: OSV.dev/GHSA, Trivy: NVD + Red Hat +
-      # Debian + GHSA, npm audit: GitHub Advisory Database), so running all
-      # four catches advisories that any single source might be missing.
+      # Four scanners with different advisory feeds; see documentation/software/build/sbom.md
 
       - name: Scan SBOM with Grype
         id: grype
@@ -195,11 +181,7 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Artifacts are immutable — a later run uploading the same name adds
-      # another copy instead of replacing the old one, so nightly reports pile
-      # up until they expire. Only the newest scan is ever of interest, so drop
-      # the earlier copies first: this workflow then costs one run's worth of
-      # reports rather than one per night.
+      # Keeps only the newest scan's reports in Actions storage; see documentation/software/build/sbom.md
       - name: Purge superseded scan artifacts
         if: steps.tag.outputs.found == 'true'
         continue-on-error: true
@@ -216,14 +198,7 @@ jobs:
               fi
             done
 
-      # Archived only when there is something to read: on a clean night every
-      # report is a list of zeros already stated in the summary, and the SBOM is
-      # reproducible from the tag's lockfile at any time. Skipping the upload
-      # keeps the quiet nights — nearly all of them — at zero bytes.
-      #
-      # Best effort even then: the reports are a convenience, the scanner counts
-      # are the result. A failed upload — an exhausted storage quota being the
-      # usual cause — is recorded in the summary and left at that.
+      # Uploads only when there are findings, best effort; see documentation/software/build/sbom.md
       - name: Upload scan reports
         id: upload
         if: steps.tag.outputs.found == 'true' && steps.scan.outputs.count != '0'
