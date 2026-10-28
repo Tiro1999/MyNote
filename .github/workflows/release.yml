@@ -90,7 +90,7 @@ jobs:
 
   # The SBOM is derived deterministically from package-lock.json, so it is
   # identical across platforms — generate it once, and make it mandatory:
-  # a release without an SBOM must not be published (see app-doc/SBOM.md).
+  # a release without an SBOM must not be published (see documentation/software/build/sbom.md).
   sbom:
     name: Generate SBOM
     runs-on: ubuntu-latest

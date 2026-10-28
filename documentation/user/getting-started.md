@@ -2,7 +2,7 @@
 
 ## Download & install
 
-Download the latest release from the [Releases](../../../releases) page.
+Download the latest release from the [Releases](https://github.com/Tiro1999/MyNote/releases) page.
 
 | Platform | File |
 |----------|------|
@@ -58,7 +58,7 @@ top-right of the welcome screen) and turn **Automatic updates** off. While it's
 off, MyNote never contacts GitHub — you decide when to grab a new release.
 
 On **macOS**, auto-update isn't available (it requires Apple code signing), so
-grab the newest `.dmg` from the [Releases](../../../releases) page when you want
+grab the newest `.dmg` from the [Releases](https://github.com/Tiro1999/MyNote/releases) page when you want
 to update.
 
 ---

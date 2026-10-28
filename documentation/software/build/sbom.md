@@ -54,7 +54,7 @@ SBOM files are attached to the GitHub Release matching the same `vMajor.Minor.Pa
 
 ## Nightly vulnerability scan
 
-The [`nightly-sbom-scan.yml`](../.github/workflows/nightly-sbom-scan.yml) workflow runs every
+The [`nightly-sbom-scan.yml`](../../../.github/workflows/nightly-sbom-scan.yml) workflow runs every
 night against the SBOM of the **most recent release tag**. It scans with
 [Grype](https://github.com/anchore/grype) and, when vulnerabilities are found, fails the run
 and opens/updates a GitHub issue labeled `sbom-scan` with a per-package findings table.

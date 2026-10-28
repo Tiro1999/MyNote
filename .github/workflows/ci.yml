@@ -35,7 +35,7 @@ jobs:
       # Same command as the Release workflow's mandatory SBOM job — fail here
       # instead of on the tag. Typical cause: an optional platform package with
       # bundleDependencies (e.g. @tailwindcss/oxide-wasm32-wasi) whose bundled
-      # deps are missing from the lockfile; see app-doc/SBOM.md.
+      # deps are missing from the lockfile; see documentation/software/build/sbom.md.
       - name: Check SBOM generation
         run: npm sbom --sbom-format cyclonedx --package-lock-only > /dev/null
 

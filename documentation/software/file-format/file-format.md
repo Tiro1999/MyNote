@@ -6,16 +6,16 @@ mobile app) and inspectable/repairable by hand if something goes wrong.
 
 ## Source of truth
 
-**[`application/schema/`](../application/schema/)** contains the maintained JSON Schema
+**[This folder](./)** contains the maintained JSON Schema
 (draft 2020-12) for every file MyNote writes:
 
 | File | Schema |
 |---|---|
-| `notebooks.json` (notebook → chapter → page/subpage hierarchy) | `application/schema/notebooks.schema.json` |
-| `page.json` (a chapter/page/subpage's canvas content) | `application/schema/page-content.schema.json` |
-| Rich-text content inside a text box (TipTap/ProseMirror JSON) | `application/schema/tiptap-document.schema.json` |
+| `notebooks.json` (notebook → chapter → page/subpage hierarchy) | [`notebooks.schema.json`](notebooks.schema.json) |
+| `page.json` (a chapter/page/subpage's canvas content) | [`page-content.schema.json`](page-content.schema.json) |
+| Rich-text content inside a text box (TipTap/ProseMirror JSON) | [`tiptap-document.schema.json`](tiptap-document.schema.json) |
 
-See [`application/schema/README.md`](../application/schema/README.md) for the full folder
+See [`README.md`](README.md) for the full folder
 layout, validation example, and — most importantly — **what to update in the schema whenever
 the data model or the TipTap editor's extensions change**. Keeping these schemas in sync with
 the code is what makes them useful both for future clients and for an eventual integrity-check

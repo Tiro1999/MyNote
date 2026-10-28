@@ -1,7 +1,5 @@
 *.env
-.github/*
-!.github/workflows/
-application/local-res
-.claude/local/
 *.local.*
-docs/
+application/local-res
+.github/copilot-instructions.md
+.github/plans/
