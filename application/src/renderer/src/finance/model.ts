@@ -1,4 +1,4 @@
-import type { ColumnConfig } from '../lib/columnConfig'
+import type { ColumnConfig } from './ledger/columnConfig'
 
 export interface Account {
   id: string

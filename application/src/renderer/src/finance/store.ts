@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import type { Account, CategoryNode, Entry, LedgerMeta } from './model'
-import type { ColumnConfig } from '../lib/columnConfig'
+import type { ColumnConfig } from './ledger/columnConfig'
 import { parseLedgerCsv, serializeLedgerCsv } from './csv'
-import { useNotebookStore } from '../store/notebookStore'
+import { useNotebookStore } from '@renderer/notebook'
 
 const FINANCE_DIR = 'finance'
 const LEDGERS_DIR = `${FINANCE_DIR}/ledgers`

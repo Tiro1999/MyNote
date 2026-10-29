@@ -6,6 +6,44 @@ const reactPlugin = require('eslint-plugin-react')
 const reactHooks = require('eslint-plugin-react-hooks')
 const globals = require('globals')
 
+// Renderer module boundaries: each module may import only the listed modules, through their barrel
+const MODULES = {
+  ui: [],
+  storage: [],
+  settings: ['storage', 'ui'],
+  notebook: ['storage', 'ui'],
+  editor: ['notebook', 'storage', 'ui'],
+  canvas: ['editor', 'notebook', 'storage', 'ui'],
+  finance: ['editor', 'notebook', 'storage', 'ui'],
+  app: ['canvas', 'editor', 'finance', 'notebook', 'settings', 'storage', 'ui']
+}
+const MODULE_NAMES = Object.keys(MODULES).sort()
+
+const moduleBoundaries = Object.entries(MODULES).map(([name, allowed]) => ({
+  files: [`src/renderer/src/${name}/**`],
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          {
+            regex: `^@renderer/(${MODULE_NAMES.filter((other) => !allowed.includes(other)).join('|')})$`,
+            message: `${name} may import: ${allowed.join(', ') || 'no other module'}.`
+          },
+          {
+            regex: '^@renderer/[^/]+/',
+            message: 'Import the module barrel @renderer/<module>, not a file inside it.'
+          },
+          {
+            regex: `^(\\.\\./)+(${MODULE_NAMES.join('|')})(/|$)`,
+            message: 'Import another module through @renderer/<module>, not a relative path.'
+          }
+        ]
+      }
+    ]
+  }
+}))
+
 module.exports = [
   { ignores: ['out/**', 'dist/**', 'node_modules/**'] },
   {
@@ -52,5 +90,22 @@ module.exports = [
   {
     files: ['src/shared/log.ts'],
     rules: { 'no-console': 'off' }
+  },
+  ...moduleBoundaries,
+  {
+    files: ['src/main/**', 'src/preload/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^@renderer(/|$)|(^|/)renderer(/|$)',
+              message: 'main and preload never import renderer code.'
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
