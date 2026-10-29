@@ -55,6 +55,11 @@ export default function SettingsDialog({ open, onClose }: Props): JSX.Element | 
         case 'dev':
           setCheckMessage('Updates are only available in the installed app.')
           break
+        case 'unsupported':
+          setCheckMessage(
+            'Updates are not available on macOS yet. Download new versions from GitHub Releases.'
+          )
+          break
         case 'error':
           setCheckMessage(`Couldn't check for updates: ${result.error}`)
           break

@@ -14,10 +14,9 @@ export default function App(): JSX.Element {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
 
-  // No browser available to open the link (e.g. headless dev container) —
-  // the main process already copied it to the clipboard; just surface it.
+  // No browser could open the link; main already copied it to the clipboard, so just show it
   useEffect(() => {
-    const unsubscribe = window.api.onExternalLinkOpenFailed((url) => {
+    const unsubscribe = window.api.links.onOpenFailed((url) => {
       setCopiedLinkUrl(url)
       clearTimeout(dismissTimeout.current)
       dismissTimeout.current = setTimeout(() => setCopiedLinkUrl(null), 5000)

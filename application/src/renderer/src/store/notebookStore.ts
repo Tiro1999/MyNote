@@ -2,10 +2,10 @@ import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import type { Notebook, Section, PageMeta, PageContent, AnyCanvasElement } from '../types'
 
-// Helpers to keep path construction in one place.
-// Node.js fs accepts forward slashes on all platforms, so we always use '/'.
-const fsApi = () => window.api.fs
+// Paths are folder-relative and '/'-separated; see documentation/software/main/ipc.md
+const fsApi = () => window.api.files
 const THEME_STORAGE_KEY = 'mynote-theme'
+const MANIFEST_PATH = 'notebooks.json'
 
 function readInitialDarkMode(): boolean {
   if (typeof window === 'undefined') return true
@@ -17,32 +17,22 @@ function persistTheme(isDarkMode: boolean): void {
   window.localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light')
 }
 
-function manifestPath(root: string): string {
-  return `${root}/notebooks.json`
-}
-
 /** Path to a chapter's own note content (a chapter can hold notes directly). */
-function sectionContentPath(root: string, notebookId: string, sectionId: string): string {
-  return `${root}/${notebookId}/${sectionId}/page.json`
+function sectionContentPath(notebookId: string, sectionId: string): string {
+  return `${notebookId}/${sectionId}/page.json`
 }
 
 /** Path to a page/subpage's content, nested by its ancestry chain of ids. */
-function pageContentPath(
-  root: string,
-  notebookId: string,
-  sectionId: string,
-  chain: PageMeta[]
-): string {
+function pageContentPath(notebookId: string, sectionId: string, chain: PageMeta[]): string {
   const idPath = chain.map((p) => p.id).join('/')
-  return `${root}/${notebookId}/${sectionId}/${idPath}/page.json`
+  return `${notebookId}/${sectionId}/${idPath}/page.json`
 }
 
-async function persistNotebooks(root: string, notebooks: Notebook[]): Promise<void> {
-  await fsApi().writeFile(manifestPath(root), JSON.stringify(notebooks, null, 2))
+async function persistNotebooks(notebooks: Notebook[]): Promise<void> {
+  await fsApi().writeText(MANIFEST_PATH, JSON.stringify(notebooks, null, 2))
 }
 
-// Backfills fields introduced after the initial data model (e.g. subpages, collapse state)
-// so notebooks.json files saved by older versions of the app keep working.
+// Backfills the lists that notebooks.json files of older versions lack (sections, pages, children)
 function normalizePage(page: PageMeta): PageMeta {
   return { ...page, children: (page.children ?? []).map(normalizePage) }
 }
@@ -121,11 +111,7 @@ function collectPageIds(page: PageMeta): string[] {
   return [page.id, ...page.children.flatMap(collectPageIds)]
 }
 
-/**
- * Returns the pages a structural template command (e.g. the subpage
- * hierarchy list) should list: a chapter's top-level pages, or a page's
- * direct subpages. Exported for use outside the store, from `templates/`.
- */
+/** A chapter's top-level pages or a page's direct subpages, listed by the page hierarchy block. */
 export function getPageTreeChildren(
   notebooks: Notebook[],
   kind: 'section' | 'page' | null,
@@ -201,12 +187,11 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
   isDarkMode: readInitialDarkMode(),
 
   setDataRoot: async (path) => {
-    const exists = await fsApi().exists(manifestPath(path))
-    if (exists) {
-      const raw = await fsApi().readFile(manifestPath(path))
+    const raw = await fsApi().readText(MANIFEST_PATH)
+    if (raw !== null) {
       set({ dataRoot: path, notebooks: normalizeNotebooks(JSON.parse(raw)) })
     } else {
-      await fsApi().writeFile(manifestPath(path), '[]')
+      await fsApi().writeText(MANIFEST_PATH, '[]')
       set({ dataRoot: path, notebooks: [] })
     }
   },
@@ -231,14 +216,13 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     if (!dataRoot) return
     const notebook = notebooks.find((nb) => nb.sections.some((s) => s.id === id))
     if (!notebook) return
-    const contentPath = sectionContentPath(dataRoot, notebook.id, id)
-    const exists = await fsApi().exists(contentPath)
-    if (exists) {
-      const raw = await fsApi().readFile(contentPath)
+    const contentPath = sectionContentPath(notebook.id, id)
+    const raw = await fsApi().readText(contentPath)
+    if (raw !== null) {
       set({ pageContent: JSON.parse(raw) })
     } else {
       const fresh: PageContent = { pageId: id, elements: [] }
-      await fsApi().writeFile(contentPath, JSON.stringify(fresh, null, 2))
+      await fsApi().writeText(contentPath, JSON.stringify(fresh, null, 2))
       set({ pageContent: fresh })
     }
   },
@@ -255,19 +239,13 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
       pageContent: null
     })
     if (!dataRoot) return
-    const contentPath = pageContentPath(
-      dataRoot,
-      location.notebook.id,
-      location.section.id,
-      location.chain
-    )
-    const exists = await fsApi().exists(contentPath)
-    if (exists) {
-      const raw = await fsApi().readFile(contentPath)
+    const contentPath = pageContentPath(location.notebook.id, location.section.id, location.chain)
+    const raw = await fsApi().readText(contentPath)
+    if (raw !== null) {
       set({ pageContent: JSON.parse(raw) })
     } else {
       const fresh: PageContent = { pageId: id, elements: [] }
-      await fsApi().writeFile(contentPath, JSON.stringify(fresh, null, 2))
+      await fsApi().writeText(contentPath, JSON.stringify(fresh, null, 2))
       set({ pageContent: fresh })
     }
   },
@@ -285,8 +263,7 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     const id = nanoid()
     const notebook: Notebook = { id, name, color, sections: [] }
     const updated = [...notebooks, notebook]
-    await fsApi().mkdir(`${dataRoot}/${id}`)
-    await persistNotebooks(dataRoot, updated)
+    await persistNotebooks(updated)
     set({
       notebooks: updated,
       activeNotebookId: id,
@@ -305,13 +282,12 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     const updated = notebooks.map((nb) =>
       nb.id === notebookId ? { ...nb, sections: [...nb.sections, section] } : nb
     )
-    await fsApi().mkdir(`${dataRoot}/${notebookId}/${sectionId}`)
     const fresh: PageContent = { pageId: sectionId, elements: [] }
-    await fsApi().writeFile(
-      sectionContentPath(dataRoot, notebookId, sectionId),
+    await fsApi().writeText(
+      sectionContentPath(notebookId, sectionId),
       JSON.stringify(fresh, null, 2)
     )
-    await persistNotebooks(dataRoot, updated)
+    await persistNotebooks(updated)
     set({
       notebooks: updated,
       activeNotebookId: notebookId,
@@ -347,13 +323,12 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
           }
         : nb
     )
-    const pagePath = `${dataRoot}/${notebook.id}/${sectionId}/${pageId}`
-    await fsApi().mkdir(`${pagePath}/assets`)
-    await fsApi().writeFile(
+    const pagePath = `${notebook.id}/${sectionId}/${pageId}`
+    await fsApi().writeText(
       `${pagePath}/page.json`,
       JSON.stringify({ pageId, elements: [] }, null, 2)
     )
-    await persistNotebooks(dataRoot, updated)
+    await persistNotebooks(updated)
     set({
       notebooks: updated,
       activeNotebookId: notebook.id,
@@ -399,13 +374,12 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
         : nb
     )
     const idPath = [...location.chain.map((p) => p.id), subpageId].join('/')
-    const pagePath = `${dataRoot}/${location.notebook.id}/${location.section.id}/${idPath}`
-    await fsApi().mkdir(`${pagePath}/assets`)
-    await fsApi().writeFile(
+    const pagePath = `${location.notebook.id}/${location.section.id}/${idPath}`
+    await fsApi().writeText(
       `${pagePath}/page.json`,
       JSON.stringify({ pageId: subpageId, elements: [] }, null, 2)
     )
-    await persistNotebooks(dataRoot, updated)
+    await persistNotebooks(updated)
     set({
       notebooks: updated,
       activeNotebookId: location.notebook.id,
@@ -422,7 +396,7 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     const trimmed = name.trim()
     if (!trimmed) return
     const updated = notebooks.map((nb) => (nb.id === id ? { ...nb, name: trimmed } : nb))
-    await persistNotebooks(dataRoot, updated)
+    await persistNotebooks(updated)
     set({ notebooks: updated })
   },
 
@@ -435,7 +409,7 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
       ...nb,
       sections: nb.sections.map((sec) => (sec.id === id ? { ...sec, name: trimmed } : sec))
     }))
-    await persistNotebooks(dataRoot, updated)
+    await persistNotebooks(updated)
     set({ notebooks: updated })
   },
 
@@ -456,7 +430,7 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
         }))
       }))
     }))
-    await persistNotebooks(dataRoot, updated)
+    await persistNotebooks(updated)
     set({ notebooks: updated })
   },
 
@@ -469,7 +443,7 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
       )
     }))
     set({ notebooks: updated })
-    if (dataRoot) await persistNotebooks(dataRoot, updated)
+    if (dataRoot) await persistNotebooks(updated)
   },
 
   togglePageCollapsed: async (pageId) => {
@@ -482,7 +456,7 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
       }))
     }))
     set({ notebooks: updated })
-    if (dataRoot) await persistNotebooks(dataRoot, updated)
+    if (dataRoot) await persistNotebooks(updated)
   },
 
   deleteSection: async (id) => {
@@ -493,8 +467,8 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     const updated = notebooks.map((nb) =>
       nb.id === notebook.id ? { ...nb, sections: nb.sections.filter((sec) => sec.id !== id) } : nb
     )
-    await fsApi().remove(`${dataRoot}/${notebook.id}/${id}`)
-    await persistNotebooks(dataRoot, updated)
+    await fsApi().remove(`${notebook.id}/${id}`)
+    await persistNotebooks(updated)
     const wasActive = activeSectionId === id
     set({
       notebooks: updated,
@@ -523,8 +497,8 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
         : nb
     )
     const idPath = location.chain.map((p) => p.id).join('/')
-    await fsApi().remove(`${dataRoot}/${location.notebook.id}/${location.section.id}/${idPath}`)
-    await persistNotebooks(dataRoot, updated)
+    await fsApi().remove(`${location.notebook.id}/${location.section.id}/${idPath}`)
+    await persistNotebooks(updated)
     const shouldReset =
       activeContentKind === 'page' && activeContentId !== null && deletedIds.has(activeContentId)
     set({
@@ -580,16 +554,16 @@ export const useNotebookStore = create<NotebookStore>((set, get) => ({
     )
       return
     if (activeContentKind === 'section') {
-      await fsApi().writeFile(
-        sectionContentPath(dataRoot, activeNotebookId, activeSectionId),
+      await fsApi().writeText(
+        sectionContentPath(activeNotebookId, activeSectionId),
         JSON.stringify(pageContent, null, 2)
       )
       return
     }
     const location = findPageLocation(notebooks, activeContentId)
     if (!location) return
-    await fsApi().writeFile(
-      pageContentPath(dataRoot, location.notebook.id, location.section.id, location.chain),
+    await fsApi().writeText(
+      pageContentPath(location.notebook.id, location.section.id, location.chain),
       JSON.stringify(pageContent, null, 2)
     )
   }

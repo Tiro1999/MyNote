@@ -9,6 +9,7 @@ import type { Align, ColumnConfig } from '../../lib/columnConfig'
 import { applyColumnFormat } from '../../lib/format'
 import ReferenceDataDialog from './ReferenceDataDialog'
 import ImportDialog from './ImportDialog'
+import { exportFileName } from './exportFileName'
 import ColumnConfigPopover from '../Common/ColumnConfigPopover'
 
 function flattenCategories(nodes: CategoryNode[], prefix = ''): string[] {
@@ -33,8 +34,7 @@ const cell = 'px-2 py-0.5 align-middle whitespace-nowrap'
 const field = 'bg-transparent field-sizing-content min-w-14 max-w-[24rem]'
 const selectField = 'bg-transparent max-w-[24rem]'
 
-// Above this many rows the grid paginates so it never renders thousands of
-// input controls at once (the real cost — the CSV backend scales fine).
+// Long ledgers paginate so the grid never renders thousands of inputs at once
 const PAGE_SIZE = 50
 const PAGINATE_THRESHOLD = 100
 
@@ -52,8 +52,7 @@ const LEDGER_COLUMNS: { id: string; label: string }[] = [
 const alignClass = (a: Align | undefined): string =>
   a === 'center' ? 'text-center' : a === 'right' ? 'text-right' : 'text-left'
 
-// Displays the column-formatted value when not focused, and the raw editable
-// text while focused — non-destructive display formatting.
+// Shows the column-formatted value, and the raw text while focused for editing
 function FormattedInput({
   value,
   col,
@@ -128,8 +127,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
   const accountName = (id: string): string =>
     accounts.find((a) => a.id === id)?.name ?? '(gelöschtes Konto)'
 
-  // Only the amount column carries a real display type (number); the rest are
-  // alignment/width only (the native date picker keeps its own display).
+  // Only the amount column has a display type (number); the others set alignment and width
   const colConfig = (id: string): ColumnConfig => {
     const base = columns[id] ?? {}
     if (id === 'amount') {
@@ -182,7 +180,7 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
   )
 
   const pickInvoice = async (apply: (path: string) => void): Promise<void> => {
-    const path = await window.api.dialog.openFile([
+    const path = await window.api.dialogs.pickFile([
       { name: 'Belege', extensions: ['pdf', 'png', 'jpg', 'jpeg'] }
     ])
     if (path) apply(path)
@@ -202,11 +200,11 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): JSX.El
 
   const handleExport = async (): Promise<void> => {
     if (!ledger) return
-    const path = await window.api.dialog.saveFile({
-      defaultPath: `${ledger.meta.name || 'ledger'}-${ledgerId}.csv`,
-      filters: [{ name: 'CSV', extensions: ['csv'] }]
-    })
-    if (path) await window.api.fs.writeFile(path, serializeLedgerCsv(ledger.entries))
+    await window.api.files.exportText(
+      exportFileName(ledger.meta.name, ledgerId),
+      [{ name: 'CSV', extensions: ['csv'] }],
+      serializeLedgerCsv(ledger.entries)
+    )
   }
 
   return (

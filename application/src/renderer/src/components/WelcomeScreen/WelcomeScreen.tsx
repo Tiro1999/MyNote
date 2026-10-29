@@ -8,7 +8,7 @@ export default function WelcomeScreen(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleOpen = async (): Promise<void> => {
-    const path = await window.api.dialog.openDirectory()
+    const path = await window.api.dialogs.openNotebookFolder()
     if (path) await setDataRoot(path)
   }
 

@@ -25,9 +25,9 @@ export default function ImportDialog({ open, onClose, ledgerId }: Props): JSX.El
     setResult(null)
     try {
       if (source === 'mynote') {
-        const path = await window.api.dialog.openFile([{ name: 'MyNote CSV', extensions: ['csv'] }])
-        if (!path) return
-        const parsed = parseLedgerCsv(await window.api.fs.readFile(path))
+        const text = await window.api.files.importText([{ name: 'MyNote CSV', extensions: ['csv'] }])
+        if (text === null) return
+        const parsed = parseLedgerCsv(text)
         const entries = parsed.map((e) => ({
           date: e.date,
           type: e.type,
@@ -41,11 +41,8 @@ export default function ImportDialog({ open, onClose, ledgerId }: Props): JSX.El
         await importEntries(ledgerId, entries)
         setResult(`${entries.length} Buchungen importiert.`)
       } else {
-        const path = await window.api.dialog.openFile([
-          { name: 'MoneyManager Export', extensions: ['xlsx'] }
-        ])
-        if (!path) return
-        const grid = await window.api.xlsx.readSheet(path)
+        const grid = await window.api.xlsx.importSheet()
+        if (grid === null) return
         const { entries, accountNames, categoryPaths, skipped } = mapMoneyManager(grid)
         const nameToId = await ensureAccounts(accountNames)
         await ensureCategories(categoryPaths)

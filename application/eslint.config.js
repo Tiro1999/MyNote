@@ -52,10 +52,5 @@ module.exports = [
   {
     files: ['src/shared/log.ts'],
     rules: { 'no-console': 'off' }
-  },
-  // Temporary: main and preload still call console directly
-  {
-    files: ['src/main/**', 'src/preload/**'],
-    rules: { 'no-console': 'off' }
   }
 ]

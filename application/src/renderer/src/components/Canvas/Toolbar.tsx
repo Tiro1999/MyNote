@@ -60,7 +60,7 @@ export default function Toolbar({ editor }: Props): JSX.Element {
 
   const handlePickFile = async () => {
     setLinkDialog({ phase: 'idle' })
-    const path = await window.api.dialog.openFile([{ name: 'All Files', extensions: ['*'] }])
+    const path = await window.api.dialogs.pickFile([{ name: 'All Files', extensions: ['*'] }])
     if (path) {
       const href = path.match(/^https?:\/\//) ? path : `file://${path}`
       editor.chain().focus().setLink({ href }).run()

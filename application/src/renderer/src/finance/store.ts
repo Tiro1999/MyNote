@@ -8,17 +8,16 @@ import { useNotebookStore } from '../store/notebookStore'
 const FINANCE_DIR = 'finance'
 const LEDGERS_DIR = `${FINANCE_DIR}/ledgers`
 
-function root(): string {
-  const dataRoot = useNotebookStore.getState().dataRoot
-  if (!dataRoot) throw new Error('No notebook folder open')
-  return dataRoot
+// Folder-relative path; main resolves it inside the notebook folder
+function join(...parts: string[]): string {
+  if (!useNotebookStore.getState().dataRoot) throw new Error('No notebook folder open')
+  return parts.join('/')
 }
-const join = (...parts: string[]): string => parts.join('/')
 
 async function readJson<T>(path: string, fallback: T): Promise<T> {
-  if (!(await window.api.fs.exists(path))) return fallback
   try {
-    return JSON.parse(await window.api.fs.readFile(path)) as T
+    const text = await window.api.files.readText(path)
+    return text === null ? fallback : (JSON.parse(text) as T)
   } catch {
     return fallback
   }
@@ -50,13 +49,12 @@ interface FinanceState {
   saveCategories: (categories: CategoryNode[]) => Promise<void>
 }
 
-const ledgerCsvPath = (id: string): string => join(root(), LEDGERS_DIR, `${id}.csv`)
-const ledgerMetaPath = (id: string): string => join(root(), LEDGERS_DIR, `${id}.meta.json`)
+const ledgerCsvPath = (id: string): string => join(LEDGERS_DIR, `${id}.csv`)
+const ledgerMetaPath = (id: string): string => join(LEDGERS_DIR, `${id}.meta.json`)
 
 async function persistLedger(id: string, state: LedgerState): Promise<void> {
-  await window.api.fs.mkdir(join(root(), LEDGERS_DIR))
-  await window.api.fs.writeFile(ledgerMetaPath(id), JSON.stringify(state.meta, null, 2))
-  await window.api.fs.writeFile(ledgerCsvPath(id), serializeLedgerCsv(state.entries))
+  await window.api.files.writeText(ledgerMetaPath(id), JSON.stringify(state.meta, null, 2))
+  await window.api.files.writeText(ledgerCsvPath(id), serializeLedgerCsv(state.entries))
 }
 
 export const useFinanceStore = create<FinanceState>((set, get) => ({
@@ -66,11 +64,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   loaded: false,
 
   loadReferenceData: async () => {
-    const accounts = await readJson<Account[]>(join(root(), FINANCE_DIR, 'accounts.json'), [])
-    const categories = await readJson<CategoryNode[]>(
-      join(root(), FINANCE_DIR, 'categories.json'),
-      []
-    )
+    const accounts = await readJson<Account[]>(join(FINANCE_DIR, 'accounts.json'), [])
+    const categories = await readJson<CategoryNode[]>(join(FINANCE_DIR, 'categories.json'), [])
     set({ accounts, categories, loaded: true })
   },
 
@@ -80,9 +75,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       name: ledgerId,
       currencySymbol: '€'
     })
-    const csv = (await window.api.fs.exists(ledgerCsvPath(ledgerId)))
-      ? await window.api.fs.readFile(ledgerCsvPath(ledgerId))
-      : ''
+    const csv = (await window.api.files.readText(ledgerCsvPath(ledgerId))) ?? ''
     set((s) => ({
       ledgers: { ...s.ledgers, [ledgerId]: { meta, entries: parseLedgerCsv(csv) } }
     }))
@@ -97,8 +90,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   },
 
   deleteLedger: async (ledgerId) => {
-    await window.api.fs.remove(ledgerCsvPath(ledgerId))
-    await window.api.fs.remove(ledgerMetaPath(ledgerId))
+    await window.api.files.remove(ledgerCsvPath(ledgerId))
+    await window.api.files.remove(ledgerMetaPath(ledgerId))
     set((s) => {
       const next = { ...s.ledgers }
       delete next[ledgerId]
@@ -107,9 +100,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   },
 
   listLedgers: async () => {
-    const dir = join(root(), LEDGERS_DIR)
-    if (!(await window.api.fs.exists(dir))) return []
-    const files = await window.api.fs.readDir(dir)
+    const dir = join(LEDGERS_DIR)
+    const files = await window.api.files.list(dir)
     const metas = files.filter((f) => f.name.endsWith('.meta.json'))
     const result: Array<{ id: string; name: string }> = []
     for (const f of metas) {
@@ -164,9 +156,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     if (toAdd.length > 0) {
       const nextAccounts = [...existing, ...toAdd]
       set({ accounts: nextAccounts })
-      await window.api.fs.mkdir(join(root(), FINANCE_DIR))
-      await window.api.fs.writeFile(
-        join(root(), FINANCE_DIR, 'accounts.json'),
+      await window.api.files.writeText(
+        join(FINANCE_DIR, 'accounts.json'),
         JSON.stringify(nextAccounts, null, 2)
       )
     }
@@ -187,9 +178,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       }
     }
     set({ categories: tree })
-    await window.api.fs.mkdir(join(root(), FINANCE_DIR))
-    await window.api.fs.writeFile(
-      join(root(), FINANCE_DIR, 'categories.json'),
+    await window.api.files.writeText(
+      join(FINANCE_DIR, 'categories.json'),
       JSON.stringify(tree, null, 2)
     )
   },
@@ -218,18 +208,16 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   saveAccounts: async (accounts) => {
     set({ accounts })
-    await window.api.fs.mkdir(join(root(), FINANCE_DIR))
-    await window.api.fs.writeFile(
-      join(root(), FINANCE_DIR, 'accounts.json'),
+    await window.api.files.writeText(
+      join(FINANCE_DIR, 'accounts.json'),
       JSON.stringify(accounts, null, 2)
     )
   },
 
   saveCategories: async (categories) => {
     set({ categories })
-    await window.api.fs.mkdir(join(root(), FINANCE_DIR))
-    await window.api.fs.writeFile(
-      join(root(), FINANCE_DIR, 'categories.json'),
+    await window.api.files.writeText(
+      join(FINANCE_DIR, 'categories.json'),
       JSON.stringify(categories, null, 2)
     )
   }
