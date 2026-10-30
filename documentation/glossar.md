@@ -6,14 +6,15 @@ Binding for code, comments and docs (`.claude/rules/core.md` §3). Persisted nam
 
 | Term (UI) | Code | Files / persisted | Notes |
 |---|---|---|---|
-| Notebook | `Notebook`, `MANIFEST_PATH` | `notebooks.json` (array of notebooks); folder `<notebookId>/` | Top level. Fields `id`, `name`, `color`, `sections`. |
+| Notebook | `Notebook` | `notebooks.json` (array of notebooks); folder `<notebookId>/` | Top level. Fields `id`, `name`, `color`, `sections`. |
+| Manifest | `MANIFEST_PATH`, `parseNotebooks`, `loadNotebooks`, `saveNotebooks` (`notebook`) | `notebooks.json` | The whole notebook tree in one file; every tree change rewrites all of it. Loading checks ids and field types, fills missing `sections`, `pages` and `children` with `[]` and keeps unknown fields; a failed check makes it a corrupt file. |
 | Chapter | `Section` | `sections` (in a notebook), `sectionId` (in a page); folder `<notebookId>/<sectionId>/` | UI says Chapter, code and files say section. Avoid: Section in UI text. |
-| Page | `PageMeta` | `pages` (in a chapter); `<notebookId>/<sectionId>/<pageId>/page.json` | Tree entry only; the content is in `page.json`. |
+| Page | `PageMeta` | `pages` (in a chapter); `<notebookId>/<sectionId>/<pageId>/page.json` | Tree entry only; the content is in `page.json`, written first by the page's first content save. |
 | Subpage | `PageMeta` | `children` (recursive); folder inside the parent page folder | Same type as a page; its `sectionId` stays the chapter id. |
 | Collapsed state | `collapsed` | `collapsed` on chapter and page (optional) | Sidebar fold state, saved in `notebooks.json`. |
 | Chapter note | `ContentRef` with `kind: 'section'` | `<notebookId>/<sectionId>/page.json` | The canvas a chapter holds itself. Its persisted `pageId` is the section id. |
-| Content ref | `ContentRef { kind, id }`, `ContentKind` | not persisted | `ContentKind` is `'section'` or `'page'`. Points at the open chapter note or page (store field `selection`). Avoid: `activeContentKind`, `activeContentId`, `activeSectionId`. |
-| Notebook folder | `dataRoot` | folder that holds `notebooks.json` | UI "Notebook Folder"; renderer `dataRoot`; main "data root", set only by the folder dialog. |
+| Content ref | `ContentRef { kind, id }`, `ContentKind`, `contentPath`, `resolves` | not persisted | `ContentKind` is `'section'` or `'page'`. Points at the open chapter note or page (store field `selection`); a tree change clears a selection that no longer resolves in the same store update. Avoid: `activeContentKind`, `activeContentId`, `activeSectionId`. |
+| Notebook folder | `dataRoot`, `openFolder`, `openError` | folder that holds `notebooks.json` | UI "Notebook Folder"; renderer `dataRoot`; main "data root", set only by the folder dialog. A folder without a manifest opens empty; a corrupt manifest sets `openError`, keeps `dataRoot` null and writes nothing. |
 | Id | `ID_PATTERN`, `isValidId`, `newId` | `id`, `sectionId`, `ledgerId` (also folder and file names) | Must match `/^[A-Za-z0-9_-]{1,64}$/` wherever it becomes a path segment. |
 
 ## Canvas and editor
@@ -21,6 +22,8 @@ Binding for code, comments and docs (`.claude/rules/core.md` §3). Persisted nam
 | Term (UI) | Code | Files / persisted | Notes |
 |---|---|---|---|
 | Canvas | `CanvasView` | `page.json`: `pageId`, `elements` (`PageContent`) | Free-form surface of one chapter note or page. Pan and zoom are not saved. |
+| Page content | `PageContent`, `parsePageContent`, `emptyContent` (`canvas`) | `page.json`: `pageId`, `elements` | Loading checks what rendering relies on: `elements` is a list, each element has a string `id` and `type`, a text box has numeric `x`, `y`, `width`, `height`, `zIndex` and an object `content`. It fills a missing `elements` with `[]` and a missing `pageId` with the content id, and keeps unknown fields on the page and on each element; a failed check makes it a corrupt file. |
+| Content store | `useContentStore`, `startContentSync`, `flushContent`, `SAVE_DELAY_MS` (`canvas`) | `page.json` of the selection | Holds the open content (`ref`, `path`, `content`, `error`) and follows `selection`; a load overtaken by a later selection is dropped. A missing file opens empty and is created by its first save; a corrupt one sets `error`, keeps `content` null and is never saved. A save goes to the path loaded with its content: `addElement` and `deleteElement` at once, `commitElement` 400 ms after the last commit, `updateElement` never. A switch sends the pending save at once, or drops it when the old content was deleted. On window close the pending save is sent, and the close waits while text is still queued behind an in-flight write. |
 | Canvas element | `CanvasElement` | `elements[]`: `id`, `type`, `x`, `y`, `width`, `height`, `zIndex` | `TextBoxElement` or `ForeignElement`. Avoid: `AnyCanvasElement`, `ImageElement`, `FileElement`. |
 | Text box | `TextBoxElement` | `type: 'textbox'`, `content` (TipTap JSON) | One TipTap editor per text box. |
 | Foreign element | `ForeignElement` | `elements[]` entry with another `type` (`image`, `file`) | Kept and saved, never rendered. |
@@ -62,12 +65,19 @@ Binding for code, comments and docs (`.claude/rules/core.md` §3). Persisted nam
 |---|---|---|---|
 | IPC channel | `IPC` (`@shared/ipc`) | – | Named `namespace:camelCase`, e.g. `files:readText`. Avoid: `fs:readFile`, `dialog:openDirectory`, `external-link-open-failed`. |
 | Preload API | `window.api`, `MyNoteApi` | – | The only object preload exposes. Avoid: `window.electron`. |
-| Folder-relative path | `resolveInRoot` | – | Path as sent over IPC: relative to the notebook folder, `/`-separated. Main rejects anything outside. |
+| Folder-relative path | `joinPath` (renderer), `resolveInRoot` (main) | – | Path as sent over IPC: relative to the notebook folder, `/`-separated. Main rejects anything outside. |
+| Write queue | `writeText`, `writeJson`, `flushWrites`, `hasUnsentWrites` (`storage`) | – | Per path, one write in flight and the newest pending text wins. `readText` and `readJson` wait for the writes queued for the same path, so a read sees their text. `flushWrites` waits for the writes sent or queued so far; `hasUnsentWrites` is true while text waits behind an in-flight write and has not reached main. |
+| Corrupt file | `CorruptFileError` (`storage`) | – | Thrown by `readJson` when a file exists but holds bad JSON or fails its parser. Message `<path>: <reason>`; `cause` holds the original error. A missing file is not corrupt (`null`). |
 | Intent | `files.importText`, `files.exportText`, `xlsx.importSheet` | – | Main-side dialog plus read or write in one call, so no external path crosses IPC. |
 | App settings | `AppSettings` | `<userData>/settings.json`: `autoUpdateEnabled` | Read by main at startup. `userData` is Electron's app-data folder, not the notebook folder. |
-| Theme | `useThemeStore`, `THEME_STORAGE_KEY` | localStorage `mynote-theme` (`dark` or `light`) | Per device; not part of the app settings. |
+| Settings dialog | `SettingsDialog`, `SettingsButton` (`settings`) | – | Opened by the ⚙️ button and mounted only while open. Shows the app settings and the manual update check; a failed settings read or save shows as error text in the dialog. |
+| Theme | `useThemeStore`, `ThemeToggle`, `applyThemeBeforeFirstPaint`, `readStoredTheme`, `THEME_STORAGE_KEY` (`settings`) | localStorage `mynote-theme` (`dark` or `light`) | Per device; not part of the app settings. Nothing stored or `dark` means dark; any other value means light. The class `dark` on `<html>` switches the look; `main.tsx` sets it before the first render. |
 | Module | `@renderer/<module>` | `<module>/index.ts` | `ui`, `storage`, `settings`, `notebook`, `editor`, `canvas`, `finance`, `app`. The barrel is the public API; no deep imports. |
-| Dialog | `Modal`, `ConfirmDialog`, `TextInputDialog`, `ContextMenu`, `notify` | – | Shared in `ui`. Avoid: `window.confirm`, `alert`, `prompt`. |
+| Dialog | `Modal`, `ConfirmDialog`, `TextInputDialog` (`ui`) | – | Rendered into `document.body` and mounted only while open. Escape closes the topmost dialog wherever the focus is; a backdrop click closes it too (`onClose`; `onCancel` in the two dialogs, but not while `ConfirmDialog` is `busy`). `pointerdown`, `mousedown`, `click`, `dblclick`, `contextmenu`, `keydown` and `wheel` stop at the modal, so the opener never sees them. Avoid: `window.confirm`, `alert`, `prompt`. |
+| Context menu | `openContextMenu`, `closeContextMenu`, `ContextMenuItem`, `ContextMenuHost` (`ui`; store `useContextMenuStore`) | – | One menu at a time, opened at a point and kept inside the window (`clampToViewport`). Closes on an outside pointerdown, Escape, scroll or window blur. App mounts the host. |
+| Toast | `notify`, `Toaster` (`ui`; store `useToastStore`) | – | Short message at the bottom of the window. `info` hides after 4 s; `error` stays until dismissed. A message equal in text and kind to a toast still shown is dropped. App mounts the `Toaster`. |
+| Button style | `buttonClass` (`ui`) | – | `primary`, `secondary`, `danger`, `ghost`: the look of the dialog buttons. |
+| Pointer drag | `usePointerDrag` (`ui`) | – | Drag with pointer capture. Reports CSS-pixel deltas since the pointerdown; a zoomed caller divides them by the zoom. |
 
 ## Build
 
