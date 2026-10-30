@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { messageOf } from '@shared/errors'
 import { useFinanceStore } from '../store'
 import { parseLedgerCsv } from '../csv'
 import { mapMoneyManager } from './moneyManager'
@@ -64,7 +65,7 @@ export default function ImportDialog({ open, onClose, ledgerId }: Props): JSX.El
         )
       }
     } catch (error) {
-      setResult(`Import fehlgeschlagen: ${(error as Error).message}`)
+      setResult(`Import fehlgeschlagen: ${messageOf(error)}`)
     } finally {
       setBusy(false)
     }

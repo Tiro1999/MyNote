@@ -27,40 +27,10 @@ export interface PageMeta {
   children: PageMeta[]
 }
 
-export type CanvasElementType = 'textbox' | 'image' | 'file'
+export type ContentKind = 'section' | 'page'
 
-export interface BaseCanvasElement {
+/** Points at a chapter note or a page; the store field `selection` holds the open one. */
+export interface ContentRef {
+  kind: ContentKind
   id: string
-  type: CanvasElementType
-  x: number
-  y: number
-  width: number
-  height: number
-  zIndex: number
-}
-
-export interface TextBoxElement extends BaseCanvasElement {
-  type: 'textbox'
-  /** TipTap ProseMirror JSON document */
-  content: Record<string, unknown>
-}
-
-export interface ImageElement extends BaseCanvasElement {
-  type: 'image'
-  /** Relative path inside the page's assets/ folder */
-  assetPath: string
-  alt: string
-}
-
-export interface FileElement extends BaseCanvasElement {
-  type: 'file'
-  assetPath: string
-  fileName: string
-}
-
-export type AnyCanvasElement = TextBoxElement | ImageElement | FileElement
-
-export interface PageContent {
-  pageId: string
-  elements: AnyCanvasElement[]
 }

@@ -1,16 +1,19 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { nanoid } from 'nanoid'
-import { useNotebookStore } from '@renderer/notebook'
 import TextBox from './TextBox'
 import Minimap from './Minimap'
-import type { TextBoxElement } from '@renderer/notebook'
+import { useContentStore } from './contentStore'
+import { isTextBox, type TextBoxElement } from './model'
 
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 3.0
 
 export default function CanvasView(): JSX.Element {
-  const { pageContent, addElement, updateElement, deleteElement, savePageContent } =
-    useNotebookStore()
+  const content = useContentStore((state) => state.content)
+  const error = useContentStore((state) => state.error)
+  const addElement = useContentStore((state) => state.addElement)
+  const commitElement = useContentStore((state) => state.commitElement)
+  const deleteElement = useContentStore((state) => state.deleteElement)
 
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 40, y: 40 })
@@ -68,10 +71,8 @@ export default function CanvasView(): JSX.Element {
     isPanning.current = false
   }
 
-  // Viewport culling: render only elements whose box intersects the visible
-  // canvas rectangle (plus half a screen of buffer so panning never pops in).
-  // Before the size is measured, render everything to avoid a blank first paint.
-  const elements = pageContent?.elements ?? []
+  // Culling keeps the text boxes in view plus half a screen; all of them until the size is measured
+  const elements = (content?.elements ?? []).filter(isTextBox)
   const culling = viewportSize.w > 0 && viewportSize.h > 0
   const marginX = (viewportSize.w / zoom) * 0.5
   const marginY = (viewportSize.h / zoom) * 0.5
@@ -113,11 +114,10 @@ export default function CanvasView(): JSX.Element {
       y,
       width: 320,
       height: 200,
-      zIndex: (pageContent?.elements.length ?? 0) + 1,
+      zIndex: (content?.elements.length ?? 0) + 1,
       content: { type: 'doc', content: [{ type: 'paragraph' }] }
     }
     addElement(el)
-    setTimeout(() => savePageContent(), 50)
   }
 
   return (
@@ -134,25 +134,14 @@ export default function CanvasView(): JSX.Element {
         className="absolute origin-top-left"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
       >
-        {visibleElements.map((el) => {
-          if (el.type === 'textbox') {
-            return (
-              <TextBox
-                key={el.id}
-                element={el}
-                onUpdate={(updates) => {
-                  updateElement(el.id, updates)
-                  savePageContent()
-                }}
-                onDelete={() => {
-                  deleteElement(el.id)
-                  savePageContent()
-                }}
-              />
-            )
-          }
-          return null
-        })}
+        {visibleElements.map((el) => (
+          <TextBox
+            key={el.id}
+            element={el}
+            onUpdate={(updates) => commitElement(el.id, updates)}
+            onDelete={() => deleteElement(el.id)}
+          />
+        ))}
       </div>
 
       {/* Bottom-right: overview minimap + zoom/pan HUD */}
@@ -196,12 +185,18 @@ export default function CanvasView(): JSX.Element {
         </div>
       </div>
 
-      {/* Empty-page hint */}
-      {(!pageContent || pageContent.elements.length === 0) && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-sm text-gray-400 select-none dark:text-gray-500">
-            Double-click anywhere to add a text box
-          </p>
+      {/* Load error, otherwise the empty-page hint */}
+      {(error || elements.length === 0) && (
+        <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
+          {error ? (
+            <p role="alert" className="text-sm wrap-anywhere text-red-600 dark:text-red-400">
+              {`Couldn't open this page: ${error}`}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400 select-none dark:text-gray-500">
+              Double-click anywhere to add a text box
+            </p>
+          )}
         </div>
       )}
     </div>

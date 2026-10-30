@@ -9,12 +9,7 @@ export interface TemplateLinkAttrs {
   label: string
 }
 
-/**
- * Inline, non-editable "jump" link used by generated content (table of
- * contents / subpage hierarchy). Not implemented as a mark on top of the
- * `Link` extension because clicking it must scroll to an in-page heading or
- * navigate the sidebar to another page — not open an external URL.
- */
+// Legacy jump link: scrolls to a heading or opens a page, never an external URL
 export const TemplateLink = Node.create({
   name: 'templateLink',
   group: 'inline',
@@ -67,7 +62,7 @@ export const TemplateLink = Node.create({
           const target = container?.querySelector(`[data-heading-id="${CSS.escape(targetId)}"]`)
           target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         } else {
-          void useNotebookStore.getState().setActivePage(targetId)
+          useNotebookStore.getState().select({ kind: 'page', id: targetId })
         }
       })
 

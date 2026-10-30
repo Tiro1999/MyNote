@@ -1,5 +1,6 @@
 import { app, Notification } from 'electron'
 import { autoUpdater, type UpdateCheckResult } from 'electron-updater'
+import { messageOf } from '@shared/errors'
 import { IPC, type UpdateCheckStatus } from '@shared/ipc'
 import { createLogger } from '@shared/log'
 import { handle } from '../ipc'
@@ -53,7 +54,7 @@ async function checkOnRequest(): Promise<UpdateCheckStatus> {
       ? { status: 'available', version: result.updateInfo.version }
       : { status: 'not-available', version: app.getVersion() }
   } catch (error) {
-    return { status: 'error', error: error instanceof Error ? error.message : String(error) }
+    return { status: 'error', error: messageOf(error) }
   }
 }
 

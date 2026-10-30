@@ -7,8 +7,6 @@ import TextAlign from '@tiptap/extension-text-align'
 import TableRow from '@tiptap/extension-table-row'
 import TableHeader from '@tiptap/extension-table-header'
 import TableCell from '@tiptap/extension-table-cell'
-import type { TextBoxElement } from '@renderer/notebook'
-import { useNotebookStore } from '@renderer/notebook'
 import {
   Callout,
   TemplateLink,
@@ -22,6 +20,8 @@ import {
 // eslint-disable-next-line no-restricted-imports -- removed in phase 4
 import { FinanceLedger, FinanceStats } from '@renderer/finance'
 import { Toolbar } from '@renderer/editor'
+import { useContentStore } from './contentStore'
+import type { TextBoxElement } from './model'
 
 interface Props {
   element: TextBoxElement
@@ -35,18 +35,12 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
   const resizeStart = useRef({ mouseX: 0, mouseY: 0, elW: 0, elH: 0 })
   const didMove = useRef(false)
 
-  // Captured once at mount for the slash-command menu's structural commands
-  // (e.g. "subpage hierarchy"). Safe because CanvasView remounts TextBox
-  // (via key={el.id}) whenever the active page/chapter changes.
-  const activeContentKind = useNotebookStore((state) => state.activeContentKind)
-  const activeContentId = useNotebookStore((state) => state.activeContentId)
+  // Anchors the slash command's page hierarchy to this content; a content switch remounts every box
+  const contentRef = useContentStore((state) => state.ref)
 
   const editor = useEditor({
     extensions: [
-      // Tiptap 3's StarterKit bundles Link and Underline; both are registered
-      // separately below (Link needs `openOnClick: false` so ExternalLinkGuard
-      // handles clicks instead), so turn off the bundled copies to avoid
-      // duplicate extensions.
+      // Link and Underline follow below (Link for the link guard), so StarterKit's copies are off
       StarterKit.configure({ heading: false, link: false, underline: false }),
       HeadingWithId,
       Underline,
@@ -63,7 +57,7 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
       TableCell,
       FinanceLedger,
       FinanceStats,
-      SlashCommand.configure({ context: { kind: activeContentKind, id: activeContentId } })
+      SlashCommand.configure({ context: { kind: contentRef?.kind ?? null, id: contentRef?.id ?? null } })
     ],
     content: element.content as object,
     onUpdate: ({ editor }) => {

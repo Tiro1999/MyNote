@@ -24,7 +24,7 @@ function buildPageList(pages: PageMeta[]): HTMLUListElement {
     link.addEventListener('click', (event) => {
       event.preventDefault()
       event.stopPropagation()
-      void useNotebookStore.getState().setActivePage(page.id)
+      useNotebookStore.getState().select({ kind: 'page', id: page.id })
     })
     item.appendChild(link)
     if (page.children.length > 0) item.appendChild(buildPageList(page.children))
@@ -33,13 +33,7 @@ function buildPageList(pages: PageMeta[]): HTMLUListElement {
   return list
 }
 
-/**
- * Live, self-updating list of a chapter's pages (or a page's subpages),
- * inserted via `/subpages`. Only remembers the anchor it was created for
- * (`kind` + `targetId`) — every render re-reads the notebook store, so
- * adding, renaming, deleting or reordering pages/subpages anywhere in that
- * subtree updates the list immediately, no manual refresh needed.
- */
+// Live list of a chapter's pages or a page's subpages; re-read from the store on every render
 export const PageHierarchyBlock = Node.create({
   name: 'pageHierarchyBlock',
   group: 'block',
@@ -79,7 +73,9 @@ export const PageHierarchyBlock = Node.create({
 
       const render = (): void => {
         const { kind, targetId } = node.attrs as PageHierarchyAttrs
-        const pages = getPageTreeChildren(useNotebookStore.getState().notebooks, kind, targetId)
+        const pages = targetId
+          ? getPageTreeChildren(useNotebookStore.getState().notebooks, { kind, id: targetId })
+          : []
 
         dom.innerHTML = ''
         const title = document.createElement('div')
@@ -99,8 +95,7 @@ export const PageHierarchyBlock = Node.create({
 
       render()
 
-      // Re-render whenever the notebook tree changes anywhere (add/rename/
-      // delete/reorder pages or subpages) — that's what makes the list "live".
+      // Re-render on every tree change, which keeps the list live
       const unsubscribe = useNotebookStore.subscribe((state, prevState) => {
         if (state.notebooks !== prevState.notebooks) render()
       })
@@ -116,10 +111,7 @@ export const PageHierarchyBlock = Node.create({
   }
 })
 
-/**
- * Replaces the `/subpages` command range with a live page-hierarchy block
- * anchored to the chapter/page it was invoked from.
- */
+// Replaces the /subpages command range with a block anchored to the open chapter or page
 export function insertPageHierarchy(editor: Editor, range: Range, context: TemplateCommandContext): void {
   if (!context.kind || !context.id) {
     editor

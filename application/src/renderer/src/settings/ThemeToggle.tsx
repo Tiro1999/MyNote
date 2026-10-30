@@ -1,19 +1,20 @@
-// eslint-disable-next-line no-restricted-imports -- removed in phase 4
-import { useNotebookStore } from '@renderer/notebook'
+import { useThemeStore } from './theme'
 
-export default function ThemeToggle(): JSX.Element {
-  const { isDarkMode, toggleDarkMode } = useNotebookStore()
+export function ThemeToggle(): React.JSX.Element {
+  const isDark = useThemeStore((state) => state.isDark)
+  const toggle = useThemeStore((state) => state.toggle)
+  const label = isDark ? 'Switch to light mode' : 'Switch to dark mode'
 
   return (
     <button
       type="button"
-      title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-      aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={label}
+      aria-label={label}
       className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-      onClick={toggleDarkMode}
+      onClick={toggle}
     >
-      <span aria-hidden="true">{isDarkMode ? '☀️' : '🌙'}</span>
-      <span>{isDarkMode ? 'Light' : 'Dark'}</span>
+      <span aria-hidden="true">{isDark ? '☀️' : '🌙'}</span>
+      <span>{isDark ? 'Light' : 'Dark'}</span>
     </button>
   )
 }

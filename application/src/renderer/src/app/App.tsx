@@ -4,15 +4,14 @@ import { Sidebar } from '@renderer/notebook'
 import { CanvasView } from '@renderer/canvas'
 import { WelcomeScreen } from '@renderer/notebook'
 import { ExternalLinkConfirmDialog } from '@renderer/editor'
+import { SettingsButton, ThemeToggle } from '@renderer/settings'
+import { ContextMenuHost, Toaster } from '@renderer/ui'
 
 export default function App(): JSX.Element {
-  const { dataRoot, activeContentId, isDarkMode } = useNotebookStore()
+  const dataRoot = useNotebookStore((state) => state.dataRoot)
+  const selection = useNotebookStore((state) => state.selection)
   const [copiedLinkUrl, setCopiedLinkUrl] = useState<string | null>(null)
   const dismissTimeout = useRef<ReturnType<typeof setTimeout>>()
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode)
-  }, [isDarkMode])
 
   // No browser could open the link; main already copied it to the clipboard, so just show it
   useEffect(() => {
@@ -28,15 +27,27 @@ export default function App(): JSX.Element {
     }
   }, [])
 
+  const actions = (
+    <>
+      <ThemeToggle />
+      <SettingsButton />
+    </>
+  )
+
   if (!dataRoot) {
-    return <WelcomeScreen />
+    return (
+      <>
+        <WelcomeScreen actions={actions} />
+        <Toaster />
+      </>
+    )
   }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <Sidebar />
+      <Sidebar actions={actions} />
       <main className="flex-1 overflow-hidden">
-        {activeContentId ? (
+        {selection ? (
           <CanvasView />
         ) : (
           <div className="flex h-full items-center justify-center text-lg text-gray-400 select-none dark:text-gray-500">
@@ -54,6 +65,8 @@ export default function App(): JSX.Element {
         </div>
       )}
       <ExternalLinkConfirmDialog />
+      <ContextMenuHost />
+      <Toaster />
     </div>
   )
 }
