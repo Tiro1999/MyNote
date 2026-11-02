@@ -1,5 +1,5 @@
 # ── Version pins — change here, takes effect everywhere ──────────────────────
-ARG NODE_VERSION=26
+ARG NODE_VERSION=26.13.0
 ARG NPM_VERSION=12
 
 # mcr.microsoft.com/devcontainers/javascript-node only ships up to Node 24.

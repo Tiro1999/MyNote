@@ -10,12 +10,16 @@ and commit the change together with any updated `package-lock.json`.
 
 | What | File | How it's consumed |
 |------|------|--------------------|
-| **Node.js major** | **`.nvmrc`** (repo root) | nvm · devcontainer · `actions/setup-node node-version-file` · Docker `ARG NODE_VERSION` |
+| **Node.js** (exact version) | **`.nvmrc`** (repo root) | nvm · `actions/setup-node node-version-file` (CI, release, nightly scan) |
+| **Node.js** (exact version, Docker copy) | **`ARG NODE_VERSION`** top of `.devcontainer/Dockerfile` and `docker/Dockerfile.ci` | `FROM node:${NODE_VERSION}-bookworm[-slim]` — **must equal `.nvmrc`** |
+| **Node.js** (security floor) | **`engines.node`** in `application/package.json` (+ lockfile root) | npm warns (`EBADENGINE`) when the local Node is older |
 | **npm major** | **`ARG NPM_VERSION`** top of both Dockerfiles | `RUN npm install -g npm@${NPM_VERSION}` · documents `engines.npm` in `package.json` |
 
-> To upgrade Node or npm, change **one file each** — `.nvmrc` for Node, the `ARG` block at the
-> top of `.devcontainer/Dockerfile` and `docker/Dockerfile.ci` for npm — and commit. Everything
-> downstream (CI, release, devcontainer, local nvm) picks up the new value automatically.
+> To upgrade Node, change `.nvmrc` **and** the `ARG NODE_VERSION` of both Dockerfiles to the same
+> exact version, raise `engines.node` when a security fix sets a new floor, then rebuild the
+> devcontainer. Node is pinned to an **exact patch version** on purpose: a major-only pin
+> (`26`) let stale Docker layers and runner caches keep an old, vulnerable patch release
+> (CVE-2026-111497, see below).
 
 ---
 
@@ -23,13 +27,15 @@ and commit the change together with any updated `package-lock.json`.
 
 | Component | Pinned version | How to verify |
 |-----------|---------------|---------------|
-| **Node.js** | `^26.0.0` (latest 26.x patch) | `node --version` |
+| **Node.js** | `26.13.0` (LTS "Lithium"); minimum `>=26.12.1` | `node --version` |
 | **npm** | `^11.0.0` (latest 11.x patch) | `npm --version` |
 | **V8** (in Node.js) | extracted at build time | `node -e "console.log(process.versions.v8)"` |
 
-> The `.nvmrc` file in the repo root pins the Node **major** version to `26`.
-> For fully reproducible builds, replace the range above with the exact output of `node --version`
-> at the time of release (e.g. `26.2.1`) and record it in the release SBOM.
+> **Why not older than 26.12.1:** Node.js releases before 26.12.1 (21.10.2026) bundle a Brotli
+> decoder with an out-of-bounds write that can lead to remote code execution
+> (CVE-2026-111497, fixed in Brotli 1.2.1; same release fixes several TLS/DNS CVEs).
+> 26.13.0 (28.10.2026) contains everything from 26.12.1.
+> Source: <https://nodejs.org/en/blog/vulnerability/october-2026-security-releases>
 
 ---
 
@@ -45,6 +51,11 @@ console.log(process.versions)
 ```
 
 The Electron version is pinned in `application/package.json` under `devDependencies.electron`.
+
+> **Not covered by the Node pin above:** the packaged app runs on Electron's embedded Node.
+> `electron@42.11.18` embeds Node **24.19.0**, which predates the CVE-2026-111497 fix (24.22.1).
+> Electron 43.8.6 / 44.10.1 / 45.2.1 embed Node 24.22.1.
+> Source: <https://artifacts.electronjs.org/headers/dist/index.json>
 
 ---
 
@@ -66,9 +77,9 @@ Release alongside the SBOM and installers.
 ## Updating the pinned versions
 
 ```bash
-# 1. Switch to the new Node version (nvm example)
-nvm install 26
-nvm use 26
+# 1. Switch to the pinned Node version (nvm reads .nvmrc)
+nvm install
+nvm use
 
 # 2. Update npm to the latest 11.x
 npm install -g npm@11
