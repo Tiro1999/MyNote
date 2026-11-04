@@ -5,6 +5,7 @@ export default defineConfig({
   define: {
     __FEATURE_FINANCE__: 'true'
   },
+  esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
       '@shared': resolve('src/shared'),

@@ -2,14 +2,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
+/* Tailwind v4 borders default to currentcolor; keep the v3 gray-200 look */
 @layer base {
   *,
   ::after,
@@ -19,20 +12,15 @@
     border-color: var(--color-gray-200, currentcolor);
   }
 
-  /* Tailwind v4 preflight dropped these v3 defaults; keep the v3 look. */
+  /* Tailwind v4 preflight dropped these v3 defaults */
   input::placeholder,
   textarea::placeholder {
     color: var(--color-gray-400);
   }
 
-  button:not(:disabled),
-  [role='button']:not(:disabled) {
+  button:not(:disabled) {
     cursor: pointer;
   }
-}
-
-* {
-  box-sizing: border-box;
 }
 
 html,
@@ -42,7 +30,6 @@ body,
 }
 
 body {
-  margin: 0;
   background: #ffffff;
   color: #111827;
 }
@@ -52,7 +39,6 @@ body {
   color: #f3f4f6;
 }
 
-/* ── TipTap / ProseMirror base styles ─────────────────────────────────────── */
 .tiptap-editor .ProseMirror {
   outline: none;
   min-height: 100%;
@@ -107,19 +93,6 @@ body {
   color: #60a5fa;
 }
 
-.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: #adb5bd;
-  pointer-events: none;
-  height: 0;
-}
-
-.dark .tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
-  color: #6b7280;
-}
-
-/* ── Callout panels (Confluence/Jira-style /info, /hinweis, /warnung, /fehler) ── */
 .tiptap-editor .ProseMirror .callout {
   display: flex;
   gap: 0.5rem;
@@ -179,7 +152,6 @@ body {
   border-color: #5c1c18;
 }
 
-/* ── Template links (table of contents / subpage hierarchy) ────────────────── */
 .tiptap-editor .ProseMirror .template-link {
   display: inline-flex;
   align-items: center;
@@ -201,7 +173,6 @@ body {
   color: #93c5fd;
 }
 
-/* ── Live TOC / page-hierarchy blocks (/toc, /subpages — auto-refresh) ─────── */
 .tiptap-editor .ProseMirror .toc-block,
 .tiptap-editor .ProseMirror .page-hierarchy-block {
   margin: 0.4rem 0;
@@ -251,11 +222,10 @@ body {
   line-height: 1.6;
 }
 
-/* ── Tables (/table) ─────────────────────────────────────────────────────── */
 .tiptap-editor .ProseMirror .table-plus-wrapper {
   position: relative;
   margin: 0.6rem 0 1.2rem;
-  /* Gutter for the "insert" +-circles that sit on the top and left boundaries. */
+  /* Gutter for the "+" circles on the top and left boundaries */
   padding: 1.1rem 0 0 1.1rem;
 }
 
@@ -292,8 +262,7 @@ body {
   background: #1f2937;
 }
 
-/* Small "+" circles centred on each row/column boundary; the left/top
-   coordinates are set inline from measured boundary positions. */
+/* "+" circles centred on each row/column boundary; left/top are set inline from measured positions */
 .tiptap-editor .ProseMirror .table-plus-btn {
   position: absolute;
   display: flex;
@@ -311,8 +280,7 @@ body {
   padding: 0;
   cursor: pointer;
   opacity: 0;
-  /* Off until the table is hovered, so the invisible circles never swallow
-     clicks meant for the cells underneath. */
+  /* Off until the table is hovered, so the invisible circles never swallow cell clicks */
   pointer-events: none;
   transform: translate(-50%, -50%);
   transition: opacity 0.1s, background 0.1s;
@@ -337,7 +305,7 @@ body {
   background: #3b82f6;
 }
 
-/* ── Table right-click context menu (appended to <body>) ─────────────────── */
+/* The table context menu is appended to <body>, outside .tiptap-editor */
 .table-context-menu {
   position: fixed;
   min-width: 12rem;

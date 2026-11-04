@@ -54,6 +54,19 @@ function box(id: string, x = 0): TextBoxElement {
   return { id, type: 'textbox', x, y: 0, width: 320, height: 200, zIndex: 1, content }
 }
 
+// Written by the image branch, which this version does not render
+const image = {
+  id: 'i1',
+  type: 'image',
+  x: 400,
+  y: 60,
+  width: 120,
+  height: 80,
+  zIndex: 2,
+  assetPath: 'photo.png',
+  alt: 'Photo'
+}
+
 function store(path: string, pageId: string, elements: unknown[]): void {
   disk.set(path, JSON.stringify({ pageId, elements }))
 }
@@ -129,6 +142,13 @@ async function open(id: string, kind: ContentKind = 'page'): Promise<void> {
 
 function writesTo(path: string): unknown[] {
   return writes.filter((write) => write.path === path).map((write) => JSON.parse(write.text))
+}
+
+// A write is in flight and a newer edit waits behind it, so a close has to be held
+function queueUnsentText(id: string): void {
+  held = []
+  state().addElement(box(id))
+  state().commitElement(id, { x: 50 })
 }
 
 function fireBeforeUnload(): FakeEvent {
@@ -222,6 +242,34 @@ describe('commitElement', () => {
   })
 })
 
+describe('a page written by another version', () => {
+  it('writes an element of another type and the extra fields back as they were loaded', async () => {
+    const locked = { ...box('a1'), locked: true }
+    disk.set(A, JSON.stringify({ pageId: 'p1', background: 'grid', elements: [locked, image] }))
+    await open('p1')
+    state().commitElement('a1', { x: 99 })
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS)
+    expect(writesTo(A)).toEqual([
+      { pageId: 'p1', background: 'grid', elements: [{ ...locked, x: 99 }, image] }
+    ])
+  })
+})
+
+describe('an id that no text box has', () => {
+  it('changes nothing and writes nothing', async () => {
+    store(A, 'p1', [box('a1'), image])
+    await open('p1')
+    const loaded = state().content
+    state().updateElement('gone', { x: 1 })
+    state().commitElement('gone', { x: 1 })
+    state().commitElement('i1', { x: 1 })
+    state().deleteElement('gone')
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS * 2)
+    expect(writes).toEqual([])
+    expect(state().content).toBe(loaded)
+  })
+})
+
 describe('deleting a page', () => {
   it('drops the pending save of the deleted open page, so its folder is not written again', async () => {
     store(A, 'p1', [box('a1')])
@@ -248,9 +296,7 @@ describe('closing the window', () => {
   it('holds the close while text waits behind an in-flight write and closes once the queue drains', async () => {
     store(A, 'p1', [box('a1')])
     await open('p1')
-    held = []
-    state().addElement(box('a2'))
-    state().commitElement('a2', { x: 50 })
+    queueUnsentText('a2')
     const event = fireBeforeUnload()
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
     expect(event.returnValue).toBe('')
@@ -259,6 +305,43 @@ describe('closing the window', () => {
     await release()
     expect(close).toHaveBeenCalledTimes(1)
     expect(writesTo(A).at(-1)).toEqual({ pageId: 'p1', elements: [box('a1'), box('a2', 50)] })
+  })
+
+  it('lets a second close pass while the first one is still held', async () => {
+    store(A, 'p1', [box('a1')])
+    await open('p1')
+    queueUnsentText('a2')
+    const first = fireBeforeUnload()
+    const second = fireBeforeUnload()
+    expect(first.preventDefault).toHaveBeenCalledTimes(1)
+    expect(second.preventDefault).not.toHaveBeenCalled()
+    expect(second.returnValue).toBeUndefined()
+    expect(close).not.toHaveBeenCalled()
+  })
+
+  it('does not hold a close event again once the queue has drained', async () => {
+    store(A, 'p1', [box('a1')])
+    await open('p1')
+    queueUnsentText('a2')
+    fireBeforeUnload()
+    await release()
+    await release()
+    expect(close).toHaveBeenCalledTimes(1)
+    const again = fireBeforeUnload()
+    expect(again.preventDefault).not.toHaveBeenCalled()
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('holds a close again for text that is unsent after an earlier hold has drained', async () => {
+    store(A, 'p1', [box('a1')])
+    await open('p1')
+    queueUnsentText('a2')
+    fireBeforeUnload()
+    await release()
+    await release()
+    queueUnsentText('a3')
+    const again = fireBeforeUnload()
+    expect(again.preventDefault).toHaveBeenCalledTimes(1)
   })
 
   it('lets the close pass and sends the pending save once when nothing is in flight', async () => {
@@ -282,6 +365,17 @@ describe('selecting the open page again', () => {
     await open('p1')
     expect(state().content).toBe(loaded)
     expect(files.readText).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a change of the tree while the error of a failed load is shown', async () => {
+    disk.set(A, '{')
+    await open('p1')
+    const failure = state().error
+    expect(failure).not.toBeNull()
+    await useNotebookStore.getState().renamePage('p2', 'Renamed')
+    await settle()
+    expect(files.readText).toHaveBeenCalledTimes(1)
+    expect(state().error).toBe(failure)
   })
 
   it('loads the page again after a failed load', async () => {

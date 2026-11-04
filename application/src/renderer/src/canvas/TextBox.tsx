@@ -15,11 +15,11 @@ import {
   TocBlock,
   PageHierarchyBlock,
   ExternalLinkGuard,
-  TableWithControls
+  TableWithControls,
+  Toolbar
 } from '@renderer/editor'
 // eslint-disable-next-line no-restricted-imports -- removed in phase 4
 import { FinanceLedger, FinanceStats } from '@renderer/finance'
-import { Toolbar } from '@renderer/editor'
 import { useContentStore } from './contentStore'
 import type { TextBoxElement } from './model'
 

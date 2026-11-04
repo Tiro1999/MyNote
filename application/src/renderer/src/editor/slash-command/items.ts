@@ -4,9 +4,7 @@ import { insertTableOfContents } from '../blocks/toc'
 import { insertPageHierarchy } from '../blocks/pageHierarchy'
 import { insertTable } from '../blocks/table/tableCommand'
 // eslint-disable-next-line no-restricted-imports -- removed in phase 4
-import { insertFinanceLedger } from '@renderer/finance'
-// eslint-disable-next-line no-restricted-imports -- removed in phase 4
-import { insertFinanceStats } from '@renderer/finance'
+import { insertFinanceLedger, insertFinanceStats } from '@renderer/finance'
 import type { TemplateCommand } from '../feature'
 
 /** Extra English/German search keywords per callout variant, in addition to the variant id itself. */

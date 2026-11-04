@@ -71,19 +71,24 @@ export function flushContent(): Promise<void> {
 }
 
 export const useContentStore = create<ContentState>((set, get) => {
-  // Content that is loading or failed to load stays untouched, so a corrupt file is never saved
-  const change = (next: (elements: CanvasElement[]) => CanvasElement[]): Snapshot | null => {
+  // No content (still loading, or failed to load) or an edit that matched nothing leaves state and file alone
+  const change = (edit: (elements: CanvasElement[]) => CanvasElement[] | null): Snapshot | null => {
     const { path, content } = get()
     if (path === null || content === null) return null
-    const changed = { ...content, elements: next(content.elements) }
+    const elements = edit(content.elements)
+    if (elements === null) return null
+    const changed = { ...content, elements }
     set({ content: changed })
     return { path, content: changed }
   }
 
   const patchTextBox = (id: string, patch: TextBoxPatch): Snapshot | null =>
-    change((elements) =>
-      elements.map((element) => (isTextBox(element) && element.id === id ? { ...element, ...patch } : element))
-    )
+    change((elements) => {
+      const target = elements.find(
+        (element): element is TextBoxElement => element.id === id && isTextBox(element)
+      )
+      return target ? elements.map((element) => (element === target ? { ...target, ...patch } : element)) : null
+    })
 
   return {
     ref: null,
@@ -106,7 +111,10 @@ export const useContentStore = create<ContentState>((set, get) => {
     },
 
     deleteElement: (id) => {
-      const snapshot = change((elements) => elements.filter((element) => element.id !== id))
+      const snapshot = change((elements) => {
+        const rest = elements.filter((element) => element.id !== id)
+        return rest.length < elements.length ? rest : null
+      })
       if (snapshot) saveNow(snapshot)
     }
   }
@@ -140,17 +148,26 @@ function followSelection(): void {
   if (selection && path) void load(selection, path, request)
 }
 
+let closeHeld = false
+
 // Text queued behind an in-flight write has not reached main yet, so the close waits for it
 function flushBeforeClose(event: BeforeUnloadEvent): void {
   void flushContent()
-  if (!hasUnsentWrites()) return
+  // A second close while one is held passes, so a stalled write cannot trap the window
+  if (closeHeld || !hasUnsentWrites()) return
+  closeHeld = true
   event.preventDefault()
   event.returnValue = ''
-  void flushWrites().then(() => window.close())
+  void flushWrites().then(() => {
+    closeHeld = false
+    window.close()
+  })
 }
 
 export function startContentSync(): () => void {
-  const unsubscribe = useNotebookStore.subscribe(followSelection)
+  const unsubscribe = useNotebookStore.subscribe((state, prev) => {
+    if (state.selection !== prev.selection) followSelection()
+  })
   window.addEventListener('beforeunload', flushBeforeClose)
   followSelection()
   return () => {

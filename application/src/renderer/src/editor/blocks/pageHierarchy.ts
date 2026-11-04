@@ -1,6 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core'
-import { useNotebookStore, getPageTreeChildren } from '@renderer/notebook'
-import type { PageMeta } from '@renderer/notebook'
+import { useNotebookStore, getPageTreeChildren, type PageMeta } from '@renderer/notebook'
 import type { TemplateCommandContext } from '../feature'
 import type { Editor, Range } from '@tiptap/core'
 
