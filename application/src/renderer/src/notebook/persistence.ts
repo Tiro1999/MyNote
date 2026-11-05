@@ -1,4 +1,12 @@
-import { ID_PATTERN, describeValue, isRecord, isValidId, readJson, writeJson } from '@renderer/storage'
+import {
+  ID_PATTERN,
+  describeValue,
+  fieldsOf,
+  isValidId,
+  readJson,
+  textOf,
+  writeJson
+} from '@renderer/storage'
 import type { Notebook, PageMeta, Section } from './model'
 
 export const MANIFEST_PATH = 'notebooks.json'
@@ -8,20 +16,9 @@ const RESERVED_NOTEBOOK_ID = 'finance'
 
 type Fields = Record<string, unknown>
 
-function fieldsOf(value: unknown, noun: string): Fields {
-  if (isRecord(value)) return value
-  throw new Error(`Each ${noun} must be an object, got ${describeValue(value)}`)
-}
-
 function idOf(fields: Fields, noun: string): string {
   if (isValidId(fields.id)) return fields.id
   throw new Error(`Invalid ${noun} id ${describeValue(fields.id)}: an id must match ${ID_PATTERN.source}`)
-}
-
-function textOf(fields: Fields, key: string, where: string): string {
-  const value = fields[key]
-  if (typeof value === 'string') return value
-  throw new Error(`${where}: ${key} must be a string, got ${describeValue(value)}`)
 }
 
 // Older versions wrote no list where nothing was in it yet
@@ -40,7 +37,7 @@ function checkCollapsed(fields: Fields, where: string): void {
 }
 
 function parsePage(raw: unknown): PageMeta {
-  const fields = fieldsOf(raw, 'page')
+  const fields = fieldsOf(raw, 'Each page')
   const id = idOf(fields, 'page')
   const where = `Page "${id}"`
   checkCollapsed(fields, where)
@@ -56,7 +53,7 @@ function parsePage(raw: unknown): PageMeta {
 }
 
 function parseSection(raw: unknown): Section {
-  const fields = fieldsOf(raw, 'chapter')
+  const fields = fieldsOf(raw, 'Each chapter')
   const id = idOf(fields, 'chapter')
   const where = `Chapter "${id}"`
   checkCollapsed(fields, where)
@@ -71,7 +68,7 @@ function parseSection(raw: unknown): Section {
 }
 
 function parseNotebook(raw: unknown): Notebook {
-  const fields = fieldsOf(raw, 'notebook')
+  const fields = fieldsOf(raw, 'Each notebook')
   const id = idOf(fields, 'notebook')
   if (id.toLowerCase() === RESERVED_NOTEBOOK_ID) {
     throw new Error(`Notebook id "${id}" is reserved: the folder ${RESERVED_NOTEBOOK_ID}/ holds the finance data`)

@@ -19,6 +19,18 @@ const MODULES = {
 }
 const MODULE_NAMES = Object.keys(MODULES).sort()
 
+// window.api is reached only through storage and these files; tests may fake it
+const WINDOW_API_ALLOWED = [
+  'src/renderer/src/storage/**',
+  'src/renderer/src/settings/**',
+  'src/renderer/src/editor/links/openFailed.ts',
+  'src/renderer/src/finance/transfer/**',
+  '**/*.test.{ts,tsx}',
+  '**/*.testing.ts'
+]
+const BLOCKING_DIALOGS = ['confirm', 'alert', 'prompt']
+const BLOCKING_DIALOG_MESSAGE = 'Blocking dialogs are banned: use ConfirmDialog, Modal or notify from @renderer/ui.'
+
 const moduleBoundaries = Object.entries(MODULES).map(([name, allowed]) => ({
   files: [`src/renderer/src/${name}/**`],
   rules: {
@@ -86,6 +98,30 @@ module.exports = [
   {
     files: ['src/renderer/**'],
     languageOptions: { globals: globals.browser }
+  },
+  {
+    files: ['src/renderer/**'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...BLOCKING_DIALOGS.map((name) => ({ name, message: BLOCKING_DIALOG_MESSAGE }))
+      ],
+      'no-restricted-properties': [
+        'error',
+        ...BLOCKING_DIALOGS.map((property) => ({ object: 'window', property, message: BLOCKING_DIALOG_MESSAGE }))
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[object.name='window'][property.name='api']",
+          message: 'Reach the main process through @renderer/storage, not window.api.'
+        }
+      ]
+    }
+  },
+  {
+    files: WINDOW_API_ALLOWED,
+    rules: { 'no-restricted-syntax': 'off' }
   },
   {
     files: ['src/shared/log.ts'],

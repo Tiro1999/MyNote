@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { messageOf } from '@shared/errors'
-import { useFinanceStore } from '../store'
-import { parseLedgerCsv } from '../csv'
-import { mapMoneyManager } from './moneyManager'
+import { Modal, buttonClass } from '@renderer/ui'
+import ErrorBox from '../ErrorBox'
+import { importLedgerCsv, importMoneyManager } from './transfer'
+import type { TransferResult } from './transfer'
 
 interface Props {
   open: boolean
@@ -13,114 +13,91 @@ interface Props {
 
 type Source = 'moneymanager' | 'mynote'
 
-export default function ImportDialog({ open, onClose, ledgerId }: Props): JSX.Element | null {
-  const { importEntries, ensureAccounts, ensureCategories, loadReferenceData } = useFinanceStore()
+interface Outcome {
+  text: string
+  failed: boolean
+}
+
+const IMPORTERS: Record<Source, (ledgerId: string) => Promise<TransferResult | null>> = {
+  moneymanager: importMoneyManager,
+  mynote: importLedgerCsv
+}
+
+const describeResult = ({ imported, skipped, createdAccounts, createdCategories }: TransferResult): string =>
+  `${imported} entries imported · ${skipped} skipped · ` +
+  `${createdAccounts} accounts and ${createdCategories} categories created.`
+
+export default function ImportDialog({ open, onClose, ledgerId }: Props): React.JSX.Element | null {
+  return open ? <ImportModal ledgerId={ledgerId} onClose={onClose} /> : null
+}
+
+function ImportModal({ ledgerId, onClose }: Omit<Props, 'open'>): React.JSX.Element {
   const [source, setSource] = useState<Source>('moneymanager')
   const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<string | null>(null)
-
-  if (!open) return null
+  const [outcome, setOutcome] = useState<Outcome | null>(null)
 
   const runImport = async (): Promise<void> => {
     setBusy(true)
-    setResult(null)
+    setOutcome(null)
     try {
-      if (source === 'mynote') {
-        const text = await window.api.files.importText([{ name: 'MyNote CSV', extensions: ['csv'] }])
-        if (text === null) return
-        const parsed = parseLedgerCsv(text)
-        const entries = parsed.map((e) => ({
-          date: e.date,
-          type: e.type,
-          amount: e.amount,
-          accountId: e.accountId,
-          categoryPath: e.categoryPath,
-          topic: e.topic,
-          tags: e.tags,
-          referenceLink: e.referenceLink
-        }))
-        await importEntries(ledgerId, entries)
-        setResult(`${entries.length} Buchungen importiert.`)
-      } else {
-        const grid = await window.api.xlsx.importSheet()
-        if (grid === null) return
-        const { entries, accountNames, categoryPaths, skipped } = mapMoneyManager(grid)
-        const nameToId = await ensureAccounts(accountNames)
-        await ensureCategories(categoryPaths)
-        const resolved = entries.map((e) => ({
-          date: e.date,
-          type: e.type,
-          amount: e.amount,
-          accountId: nameToId[e.accountName] ?? '',
-          categoryPath: e.categoryPath,
-          topic: e.topic,
-          tags: e.tags,
-          referenceLink: e.referenceLink
-        }))
-        await importEntries(ledgerId, resolved)
-        await loadReferenceData()
-        setResult(
-          `${resolved.length} Buchungen importiert · ${skipped} übersprungen (Transfers/ungültig) · ` +
-            `${accountNames.length} Konten und ${categoryPaths.length} Kategorien angelegt/ergänzt.`
-        )
-      }
+      const result = await IMPORTERS[source](ledgerId)
+      setOutcome(result === null ? null : { text: describeResult(result), failed: false })
     } catch (error) {
-      setResult(`Import fehlgeschlagen: ${messageOf(error)}`)
+      setOutcome({ text: messageOf(error), failed: true })
     } finally {
       setBusy(false)
     }
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
+  return (
+    <Modal
+      title="Import"
+      size="md"
+      onClose={() => {
+        if (!busy) onClose()
+      }}
+      footer={
+        <>
+          <button type="button" className={buttonClass.secondary} disabled={busy} onClick={onClose}>
+            Close
+          </button>
+          <button type="button" className={buttonClass.primary} disabled={busy} onClick={runImport}>
+            {busy ? 'Importing…' : 'Choose file and import'}
+          </button>
+        </>
+      }
     >
-      <div
-        className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-700 dark:bg-gray-900"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Import</h2>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Importiert in dieses Ledger (#{ledgerId}). Fehlende Konten und Kategorien werden dabei
-          automatisch angelegt.
-        </p>
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        Imports into this ledger (#{ledgerId}). A Money Manager import also creates the accounts and
+        categories it needs.
+      </p>
 
-        <label className="mt-4 block text-sm text-gray-700 dark:text-gray-200">
-          Quelle
-          <select
-            className="mt-1 block w-full rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
-            value={source}
-            onChange={(e) => setSource(e.target.value as Source)}
-          >
-            <option value="moneymanager">MoneyManager (.xlsx)</option>
-            <option value="mynote">MyNote (.csv)</option>
-          </select>
-        </label>
+      <label className="mt-4 block text-sm text-gray-700 dark:text-gray-200">
+        Source
+        <select
+          className="mt-1 block w-full rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+          value={source}
+          disabled={busy}
+          onChange={(e) => setSource(e.target.value as Source)}
+        >
+          <option value="moneymanager">Money Manager (.xlsx)</option>
+          <option value="mynote">MyNote (.csv)</option>
+        </select>
+      </label>
 
-        {result && (
-          <div className="mt-3 rounded-sm bg-gray-100 p-2 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-            {result}
-          </div>
-        )}
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-700"
-            onClick={onClose}
-          >
-            Schließen
-          </button>
-          <button
-            disabled={busy}
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            onClick={runImport}
-          >
-            {busy ? 'Importiere…' : 'Datei wählen & importieren'}
-          </button>
+      {outcome?.failed && (
+        <div className="mt-3">
+          <ErrorBox>{outcome.text}</ErrorBox>
         </div>
-      </div>
-    </div>,
-    document.body
+      )}
+      {outcome && !outcome.failed && (
+        <div
+          role="status"
+          className="mt-3 rounded-sm bg-gray-100 p-2 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+        >
+          {outcome.text}
+        </div>
+      )}
+    </Modal>
   )
 }

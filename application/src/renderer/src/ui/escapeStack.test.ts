@@ -13,8 +13,8 @@ function push(target: EventTarget, onEscape: () => void): () => void {
   return pop
 }
 
-function press(target: EventTarget, key: string): void {
-  target.dispatchEvent(Object.assign(new Event('keydown'), { key }))
+function press(target: EventTarget, key: string, repeat = false): void {
+  target.dispatchEvent(Object.assign(new Event('keydown'), { key, repeat }))
 }
 
 describe('pushEscapeHandler', () => {
@@ -31,6 +31,22 @@ describe('pushEscapeHandler', () => {
     press(fakeWindow, 'Escape')
     expect(closeLower).toHaveBeenCalledTimes(1)
     expect(closeUpper).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores an auto-repeated Escape, so a held key closes only the topmost modal', () => {
+    const fakeWindow = new EventTarget()
+    const closeLower = vi.fn()
+    const closeUpper = vi.fn()
+    push(fakeWindow, closeLower)
+    const popUpper = push(fakeWindow, closeUpper)
+    press(fakeWindow, 'Escape')
+    popUpper()
+    press(fakeWindow, 'Escape', true)
+    press(fakeWindow, 'Escape', true)
+    expect(closeUpper).toHaveBeenCalledTimes(1)
+    expect(closeLower).not.toHaveBeenCalled()
+    press(fakeWindow, 'Escape')
+    expect(closeLower).toHaveBeenCalledTimes(1)
   })
 
   it('ignores other keys', () => {

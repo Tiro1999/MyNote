@@ -13,4 +13,4 @@ export {
   writeText
 } from './files'
 export { ID_PATTERN, isValidId, newId } from './ids'
-export { describeValue, isRecord } from './validate'
+export { describeValue, fieldsOf, isRecord, textOf } from './validate'

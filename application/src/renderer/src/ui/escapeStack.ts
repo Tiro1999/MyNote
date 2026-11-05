@@ -1,12 +1,13 @@
 // One entry per open modal, in the order they opened
 const stack: object[] = []
 
-// Escape reaches only the handler pushed last, wherever the focus is; returns the function that pops it
+// Escape reaches only the handler pushed last, wherever the focus is; a repeat (held key) is ignored; returns the pop function
 export function pushEscapeHandler(target: EventTarget, onEscape: () => void): () => void {
   const entry = {}
   stack.push(entry)
   const onKeyDown = (e: Event): void => {
-    if ((e as KeyboardEvent).key === 'Escape' && stack.at(-1) === entry) onEscape()
+    const { key, repeat } = e as KeyboardEvent
+    if (key === 'Escape' && !repeat && stack.at(-1) === entry) onEscape()
   }
   target.addEventListener('keydown', onKeyDown, true)
   return () => {

@@ -2,6 +2,7 @@
   "name": "mynote",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": ["*.css"],
   "description": "A highly customizable personal notebook application",
   "author": "Tiro1999",
   "main": "out/main/index.js",

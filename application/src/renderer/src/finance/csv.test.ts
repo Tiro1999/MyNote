@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseCsv, serializeCsv, parseLedgerCsv, serializeLedgerCsv } from './csv'
-import type { Entry } from './model'
+import { parseCsv, serializeCsv } from './csv'
 
 describe('rfc-4180', () => {
   it('round-trips fields with commas, quotes and newlines', () => {
@@ -11,35 +10,19 @@ describe('rfc-4180', () => {
     const text = serializeCsv(rows)
     expect(parseCsv(text)).toEqual(rows)
   })
-})
 
-describe('ledger csv', () => {
-  const entry: Entry = {
-    id: 'e1',
-    pos: 1,
-    date: '2026-06-01',
-    type: 'expense',
-    amount: '12.34',
-    accountId: 'acc1',
-    categoryPath: 'Essen/Lebensmittel',
-    topic: 'Wocheneinkauf, groß',
-    tags: ['Tax2026', 'Haushalt'],
-    referenceLink: 'C:/inv/1.pdf'
-  }
-
-  it('round-trips an entry through header+row', () => {
-    const text = serializeLedgerCsv([entry])
-    const parsed = parseLedgerCsv(text)
-    expect(parsed).toEqual([entry])
+  it('reads CRLF and LF line ends and ignores a final line end', () => {
+    expect(parseCsv('a,b\r\nc,d\r\n')).toEqual([
+      ['a', 'b'],
+      ['c', 'd']
+    ])
+    expect(parseCsv('a,b\nc,d')).toEqual([
+      ['a', 'b'],
+      ['c', 'd']
+    ])
   })
 
-  it('serializes tags as semicolon-joined', () => {
-    const text = serializeLedgerCsv([entry])
-    expect(text).toContain('Tax2026;Haushalt')
-  })
-
-  it('treats an empty/whitespace file as no entries', () => {
-    expect(parseLedgerCsv('')).toEqual([])
-    expect(parseLedgerCsv('\n')).toEqual([])
+  it('joins rows with CRLF and no final line end', () => {
+    expect(serializeCsv([['a'], ['b']])).toBe('a\r\nb')
   })
 })

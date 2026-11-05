@@ -1,11 +1,12 @@
-import { createPortal } from 'react-dom'
-import type { Align, ColumnConfig, ColumnType } from './columnConfig'
+import { Modal, buttonClass } from '@renderer/ui'
+import CommitInput from './CommitInput'
+import type { Validate } from './CommitInput'
+import { MAX_EDIT_DECIMALS, parseDecimals } from './columns'
+import type { Align, ColumnConfig, NumberFormat } from './columns'
 
 interface Props {
-  open: boolean
   title: string
   value: ColumnConfig
-  allowType: boolean
   onChange: (next: ColumnConfig) => void
   onResetWidth: () => void
   onClose: () => void
@@ -13,157 +14,110 @@ interface Props {
 
 const ALIGNS: Align[] = ['left', 'center', 'right']
 const ALIGN_LABEL: Record<Align, string> = { left: '⯇', center: '≡', right: '⯈' }
+const FIELD = 'w-16 rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700'
 
-export default function ColumnConfigPopover({
-  open,
-  title,
-  value,
-  allowType,
-  onChange,
-  onResetWidth,
-  onClose
-}: Props): JSX.Element | null {
-  if (!open) return null
+const validateDecimals: Validate = (raw) => {
+  const decimals = parseDecimals(raw)
+  return decimals === null
+    ? { error: `Enter a whole number from 0 to ${MAX_EDIT_DECIMALS}` }
+    : { value: String(decimals) }
+}
 
-  const type: ColumnType = value.type ?? 'text'
-  const number = value.number ?? {
-    decimals: 2,
-    thousands: true,
-    currencySymbol: '',
-    symbolPosition: 'after' as const
+export default function ColumnConfigPopover({ title, value, onChange, onResetWidth, onClose }: Props): React.JSX.Element {
+  const { number } = value
+  const changeNumber = (patch: Partial<NumberFormat>): void => {
+    if (number) onChange({ ...value, number: { ...number, ...patch } })
   }
-  const date = value.date ?? { pattern: 'dd.MM.yyyy' as const }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-xs rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-xl dark:border-gray-700 dark:bg-gray-900"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Spalte: {title}</h3>
-
-        {allowType && (
-          <label className="mt-3 block text-xs">
-            Typ
-            <select
-              className="mt-1 block w-full rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
-              value={type}
-              onChange={(e) => onChange({ ...value, type: e.target.value as ColumnType })}
-            >
-              <option value="text">Text</option>
-              <option value="number">Zahl</option>
-              <option value="date">Datum</option>
-            </select>
-          </label>
-        )}
-
-        <div className="mt-3 text-xs">
-          Ausrichtung
-          <div className="mt-1 flex gap-1">
-            {ALIGNS.map((a) => (
-              <button
-                key={a}
-                className={`flex-1 rounded-sm border px-2 py-1 ${
-                  (value.align ?? 'left') === a
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                    : 'border-gray-300 dark:border-gray-700'
-                }`}
-                onClick={() => onChange({ ...value, align: a })}
-              >
-                {ALIGN_LABEL[a]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {type === 'number' && (
-          <div className="mt-3 space-y-2 text-xs">
-            <label className="flex items-center justify-between">
-              Nachkommastellen
-              <input
-                type="number"
-                min={0}
-                max={4}
-                className="w-16 rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
-                value={number.decimals}
-                onChange={(e) =>
-                  onChange({ ...value, number: { ...number, decimals: Number(e.target.value) } })
-                }
-              />
-            </label>
-            <label className="flex items-center justify-between">
-              Tausendertrennung
-              <input
-                type="checkbox"
-                checked={number.thousands}
-                onChange={(e) =>
-                  onChange({ ...value, number: { ...number, thousands: e.target.checked } })
-                }
-              />
-            </label>
-            <label className="flex items-center justify-between">
-              Währungssymbol
-              <input
-                className="w-16 rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
-                value={number.currencySymbol}
-                onChange={(e) =>
-                  onChange({ ...value, number: { ...number, currencySymbol: e.target.value } })
-                }
-              />
-            </label>
-            <label className="flex items-center justify-between">
-              Symbolposition
-              <select
-                className="rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
-                value={number.symbolPosition}
-                onChange={(e) =>
-                  onChange({
-                    ...value,
-                    number: { ...number, symbolPosition: e.target.value as 'before' | 'after' }
-                  })
-                }
-              >
-                <option value="before">davor</option>
-                <option value="after">danach</option>
-              </select>
-            </label>
-          </div>
-        )}
-
-        {type === 'date' && (
-          <label className="mt-3 block text-xs">
-            Datumsformat
-            <select
-              className="mt-1 block w-full rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
-              value={date.pattern}
-              onChange={(e) =>
-                onChange({ ...value, date: { pattern: e.target.value as typeof date.pattern } })
-              }
-            >
-              <option value="dd.MM.yyyy">TT.MM.JJJJ</option>
-              <option value="dd.MM.yy">TT.MM.JJ</option>
-              <option value="yyyy-MM-dd">JJJJ-MM-TT</option>
-              <option value="MM/dd/yyyy">MM/TT/JJJJ</option>
-            </select>
-          </label>
-        )}
-
-        <div className="mt-4 flex items-center justify-between">
-          <button className="text-xs text-gray-500 hover:underline" onClick={onResetWidth}>
-            Breite auf Auto
-          </button>
+  return (
+    <Modal
+      title={`Column: ${title}`}
+      size="sm"
+      onClose={onClose}
+      footer={
+        <>
           <button
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-            onClick={onClose}
+            type="button"
+            className={buttonClass.ghost}
+            disabled={value.width === undefined}
+            onClick={onResetWidth}
           >
-            Fertig
+            Auto width
           </button>
+          <button type="button" className={buttonClass.primary} onClick={onClose}>
+            Done
+          </button>
+        </>
+      }
+    >
+      <div className="mt-3 text-xs">
+        Alignment
+        <div className="mt-1 flex gap-1">
+          {ALIGNS.map((align) => (
+            <button
+              key={align}
+              type="button"
+              aria-label={`Align ${align}`}
+              aria-pressed={(value.align ?? 'left') === align}
+              className={`flex-1 rounded-sm border px-2 py-1 ${
+                (value.align ?? 'left') === align
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                  : 'border-gray-300 dark:border-gray-700'
+              }`}
+              onClick={() => onChange({ ...value, align })}
+            >
+              {ALIGN_LABEL[align]}
+            </button>
+          ))}
         </div>
       </div>
-    </div>,
-    document.body
+
+      {number && (
+        <div className="mt-3 space-y-2 text-xs">
+          <div className="flex items-start justify-between gap-2">
+            Decimals
+            <div className="flex flex-col items-end">
+              <CommitInput
+                className={FIELD}
+                label="Decimals"
+                value={String(number.decimals)}
+                validate={validateDecimals}
+                onCommit={(text) => changeNumber({ decimals: Number(text) })}
+              />
+            </div>
+          </div>
+          <label className="flex items-center justify-between">
+            Thousands separator
+            <input
+              type="checkbox"
+              checked={number.thousands}
+              onChange={(e) => changeNumber({ thousands: e.target.checked })}
+            />
+          </label>
+          <div className="flex items-start justify-between gap-2">
+            Currency symbol
+            <div className="flex flex-col items-end">
+              <CommitInput
+                className={FIELD}
+                label="Currency symbol"
+                value={number.currencySymbol}
+                onCommit={(currencySymbol) => changeNumber({ currencySymbol })}
+              />
+            </div>
+          </div>
+          <label className="flex items-center justify-between">
+            Symbol position
+            <select
+              className="rounded-sm border border-gray-300 bg-transparent px-2 py-1 dark:border-gray-700"
+              value={number.symbolPosition}
+              onChange={(e) => changeNumber({ symbolPosition: e.target.value === 'before' ? 'before' : 'after' })}
+            >
+              <option value="before">before</option>
+              <option value="after">after</option>
+            </select>
+          </label>
+        </div>
+      )}
+    </Modal>
   )
 }

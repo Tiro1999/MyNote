@@ -1,12 +1,19 @@
 import { createNodeFromContent, getSchema, type JSONContent } from '@tiptap/core'
+import type { Node as ProseMirrorNode, Schema } from '@tiptap/pm/model'
+import { EditorState } from '@tiptap/pm/state'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildExtensions } from '@renderer/editor'
+import { buildExtensions, coreBlocks, type EditorFeature } from '@renderer/editor'
+import { financeFeature, financePlaceholderFeature } from '@renderer/finance'
 import { editorFeatures } from './editorFeatures'
 
-const schema = getSchema(buildExtensions(editorFeatures))
+// A build without finance loads the same pages, so every test below runs under both
+const featureSets: Record<string, EditorFeature[]> = {
+  'the finance feature': [coreBlocks, financeFeature],
+  'the finance placeholder': [coreBlocks, financePlaceholderFeature]
+}
 
-function load(json: JSONContent): JSONContent {
-  return createNodeFromContent(json, schema, { errorOnInvalidContent: true }).toJSON()
+function loadNode(schema: Schema, json: JSONContent): ProseMirrorNode {
+  return createNodeFromContent(json, schema, { errorOnInvalidContent: true }) as ProseMirrorNode
 }
 
 type Mark = { type: string; attrs?: Record<string, unknown> }
@@ -128,9 +135,35 @@ const fixtures: Record<string, JSONContent> = {
   'finance statistics': doc(stats)
 }
 
-describe('editorFeatures schema', () => {
-  it.each(Object.entries(fixtures))('loads a page with %s unchanged', (_name, json) => {
+describe.each(Object.entries(featureSets))('schema with %s', (_name, features) => {
+  const schema = getSchema(buildExtensions(features))
+  const load = (json: JSONContent): JSONContent => loadNode(schema, json).toJSON()
+
+  it.each(Object.entries(fixtures))('loads a page with %s unchanged', (_fixture, json) => {
     expect(load(json)).toEqual(json)
+  })
+
+  it('loads a page with finance blocks between other blocks unchanged', () => {
+    const page = doc(
+      paragraph(text('before')),
+      ledger,
+      stats,
+      node('callout', { variant: 'note' }, paragraph(text('kept'))),
+      paragraph(text('after'))
+    )
+    expect(load(page)).toEqual(page)
+  })
+
+  it('keeps the finance blocks as they are when the text around them is edited', () => {
+    const page = doc(paragraph(text('before')), ledger, stats, paragraph(text('after')))
+    const state = EditorState.create({ doc: loadNode(schema, page) })
+    const edited = state.apply(state.tr.insertText(' and more', 7))
+    expect(edited.doc.toJSON().content).toEqual([
+      paragraph(text('before and more')),
+      ledger,
+      stats,
+      paragraph(text('after'))
+    ])
   })
 
   it('drops the legacy heading id and keeps the level, the alignment and the text', () => {
@@ -152,8 +185,32 @@ describe('editorFeatures schema', () => {
 
     it('registers no extension name twice, also inside StarterKit and TableKit', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      getSchema(buildExtensions(editorFeatures))
+      getSchema(buildExtensions(features))
       expect(warn).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('the real feature list', () => {
+  it('loads the finance fixtures like the feature set it stands for', () => {
+    const schema = getSchema(buildExtensions(editorFeatures))
+    for (const json of [doc(ledger), doc(stats)]) {
+      expect(loadNode(schema, json).toJSON()).toEqual(json)
+    }
+  })
+})
+
+describe('both finance feature sets', () => {
+  it('give the finance blocks the same attributes and the same defaults', () => {
+    const [real, placeholder] = Object.values(featureSets).map((features) => getSchema(buildExtensions(features)))
+    for (const name of ['financeLedger', 'financeStats']) {
+      expect(Object.keys(placeholder.nodes[name].spec.attrs ?? {})).toEqual(Object.keys(real.nodes[name].spec.attrs ?? {}))
+      expect(placeholder.nodes[name].create().attrs).toEqual(real.nodes[name].create().attrs)
+    }
+  })
+
+  it('register the same node names', () => {
+    const [real, placeholder] = Object.values(featureSets).map((features) => getSchema(buildExtensions(features)))
+    expect(Object.keys(placeholder.nodes).sort()).toEqual(Object.keys(real.nodes).sort())
   })
 })

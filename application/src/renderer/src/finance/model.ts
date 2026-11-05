@@ -1,4 +1,9 @@
-import type { ColumnConfig } from './ledger/columnConfig'
+import type { ColumnConfig } from './ledger/columns'
+
+export const LOCALE = 'de-DE'
+export const DEFAULT_CURRENCY = '€'
+// Type words of a Money Manager export; data values, not UI text
+export const MONEY_MANAGER = { income: 'Einkommen', expense: 'Ausgabe' } as const
 
 export interface Account {
   id: string
@@ -30,17 +35,16 @@ export interface Entry {
   referenceLink: string
 }
 
+// An entry before the store gives it an id and a pos
+export type EntryDraft = Omit<Entry, 'id' | 'pos'>
+
 export interface LedgerMeta {
   name: string
   currencySymbol: string
   columns?: Record<string, ColumnConfig>
 }
 
-/**
- * Parse a user/stored decimal (dot or comma) into integer cents, rounded to the
- * nearest cent. Parses via string rather than `value * 100` to avoid IEEE-754
- * errors (e.g. `1.005 * 100 === 100.4999…` would truncate to 100, not 101).
- */
+/** Integer cents from stored or typed text, rounded half up with string maths; unparsable text gives 0. */
 export function parseMoneyToCents(input: string): number {
   const match = input.trim().replace(',', '.').match(/^(-?)(\d*)(?:\.(\d+))?$/)
   if (!match) return 0
@@ -52,19 +56,72 @@ export function parseMoneyToCents(input: string): number {
   return sign === '-' ? -cents : cents
 }
 
-/** Format integer cents as "1.234,56 <symbol>" (de-DE grouping). */
+const AMOUNT_PATTERN = /^(-?)(\d*)(?:[.,](\d+))?$/
+
+/** Canonical dot-decimal text with two decimals, or null when the input is not a valid amount. */
+export function normalizeAmount(input: string, allowNegative: boolean): string | null {
+  const text = input.trim()
+  const match = AMOUNT_PATTERN.exec(text)
+  if (!match) return null
+  const [, sign, intPart, fracPart] = match
+  if (intPart === '' && fracPart === undefined) return null
+  if (sign === '-' && !allowNegative) return null
+  const cents = Math.abs(parseMoneyToCents(text))
+  if (!Number.isSafeInteger(cents)) return null
+  if (cents === 0 && !allowNegative) return null
+  const rest = cents % 100
+  const whole = (cents - rest) / 100
+  const negative = sign === '-' && cents > 0
+  return `${negative ? '-' : ''}${whole}.${String(rest).padStart(2, '0')}`
+}
+
+/** Format integer cents as "1.234,56 <symbol>" in the app locale. */
 export function formatCents(cents: number, symbol: string): string {
-  const amount = (cents / 100).toLocaleString('de-DE', {
+  const amount = (cents / 100).toLocaleString(LOCALE, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
   return `${amount} ${symbol}`
 }
 
+export function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+export function parseTags(text: string): string[] {
+  return text
+    .split(/[,;]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+}
+
+/** Local calendar date as YYYY-MM-DD. */
+export function todayISO(now = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
 export function splitCategoryPath(path: string): string[] {
   return path.length === 0 ? [] : path.split('/')
 }
 
+// Segments trimmed and empty ones dropped; '' = no category
+export function cleanCategoryPath(path: string): string {
+  return splitCategoryPath(path)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment !== '')
+    .join('/')
+}
+
 export function categoryAtDepth(path: string, depth: number): string {
   return splitCategoryPath(path).slice(0, depth).join('/')
+}
+
+/** Every path prefix of the tree, parents before their children. */
+export function flattenCategories(nodes: CategoryNode[], prefix = ''): string[] {
+  return nodes.flatMap((node) => {
+    const path = prefix ? `${prefix}/${node.name}` : node.name
+    return [path, ...flattenCategories(node.children, path)]
+  })
 }
