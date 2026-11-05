@@ -1,36 +1,22 @@
 import { Node, mergeAttributes } from '@tiptap/core'
-import { useNotebookStore, getPageTreeChildren, type PageMeta } from '@renderer/notebook'
-import type { TemplateCommandContext } from '../feature'
-import type { Editor, Range } from '@tiptap/core'
-
-export type PageHierarchyKind = 'section' | 'page'
+import { getPageTreeChildren, useNotebookStore, type ContentKind, type PageMeta } from '@renderer/notebook'
+import type { SlashItem } from '../feature'
+import { replaceRangeWith } from './insert'
+import { renderLinkListBlock, type LinkListItem } from './linkList'
 
 interface PageHierarchyAttrs {
-  kind: PageHierarchyKind
+  kind: ContentKind
   targetId: string | null
 }
 
-/** Recursively builds a nested `<ul>` of clickable page/subpage links. */
-function buildPageList(pages: PageMeta[]): HTMLUListElement {
-  const list = document.createElement('ul')
-  list.className = 'toc-block-list'
-  pages.forEach((page) => {
-    const item = document.createElement('li')
-    item.className = 'toc-block-item'
-    const link = document.createElement('span')
-    link.className = 'template-link'
-    link.textContent = page.title || 'Untitled Page'
-    link.addEventListener('click', (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      useNotebookStore.getState().select({ kind: 'page', id: page.id })
-    })
-    item.appendChild(link)
-    if (page.children.length > 0) item.appendChild(buildPageList(page.children))
-    list.appendChild(item)
-  })
-  return list
+export function pageLinks(pages: PageMeta[], openPage: (id: string) => void, depth = 0): LinkListItem[] {
+  return pages.flatMap((page) => [
+    { label: page.title, depth, onClick: () => openPage(page.id) },
+    ...pageLinks(page.children, openPage, depth + 1)
+  ])
 }
+
+const openPage = (id: string): void => useNotebookStore.getState().select({ kind: 'page', id })
 
 // Live list of a chapter's pages or a page's subpages; re-read from the store on every render
 export const PageHierarchyBlock = Node.create({
@@ -42,9 +28,8 @@ export const PageHierarchyBlock = Node.create({
   addAttributes() {
     return {
       kind: {
-        default: 'section' as PageHierarchyKind,
-        parseHTML: (element) =>
-          (element.getAttribute('data-kind') as PageHierarchyKind) || 'section',
+        default: 'section' as ContentKind,
+        parseHTML: (element) => (element.getAttribute('data-kind') as ContentKind) || 'section',
         renderHTML: (attributes: PageHierarchyAttrs) => ({ 'data-kind': attributes.kind })
       },
       targetId: {
@@ -75,21 +60,11 @@ export const PageHierarchyBlock = Node.create({
         const pages = targetId
           ? getPageTreeChildren(useNotebookStore.getState().notebooks, { kind, id: targetId })
           : []
-
-        dom.innerHTML = ''
-        const title = document.createElement('div')
-        title.className = 'toc-block-title'
-        title.textContent = 'Seitenhierarchie'
-        dom.appendChild(title)
-
-        if (pages.length === 0) {
-          const empty = document.createElement('div')
-          empty.className = 'toc-block-empty'
-          empty.textContent = 'Keine Unterseiten gefunden.'
-          dom.appendChild(empty)
-          return
-        }
-        dom.appendChild(buildPageList(pages))
+        renderLinkListBlock(dom, {
+          title: 'Page hierarchy',
+          emptyText: 'No subpages found.',
+          items: pageLinks(pages, openPage)
+        })
       }
 
       render()
@@ -110,26 +85,18 @@ export const PageHierarchyBlock = Node.create({
   }
 })
 
-// Replaces the /subpages command range with a block anchored to the open chapter or page
-export function insertPageHierarchy(editor: Editor, range: Range, context: TemplateCommandContext): void {
-  if (!context.kind || !context.id) {
-    editor
-      .chain()
-      .focus()
-      .deleteRange(range)
-      .insertContent('<p><em>Keine Unterseiten gefunden.</em></p>')
-      .run()
-    return
-  }
-  editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .insertContent({
+export const pageHierarchySlashItem: SlashItem = {
+  id: 'page-hierarchy',
+  title: 'Page hierarchy',
+  description: 'Lists the subpages of this page or chapter as links and updates itself',
+  icon: '🗂️',
+  keywords: ['subpages', 'unterseiten', 'seitenhierarchie', 'hierarchy', 'pages', 'seiten'],
+  run: (editor, range) => {
+    const selection = useNotebookStore.getState().selection
+    if (!selection) return
+    replaceRangeWith(editor, range, {
       type: 'pageHierarchyBlock',
-      attrs: { kind: context.kind, targetId: context.id }
+      attrs: { kind: selection.kind, targetId: selection.id }
     })
-    .run()
+  }
 }
-
-export default PageHierarchyBlock

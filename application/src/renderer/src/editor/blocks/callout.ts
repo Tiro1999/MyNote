@@ -1,21 +1,25 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import type { Editor, Range } from '@tiptap/core'
+import type { SlashItem } from '../feature'
+import { replaceRangeWith } from './insert'
+import './callout.css'
 
-export type CalloutVariant = 'info' | 'note' | 'warning' | 'error'
+export const CALLOUT_VARIANTS = ['info', 'note', 'warning', 'error'] as const
+export type CalloutVariant = (typeof CALLOUT_VARIANTS)[number]
 
-/** Icon + accessible label shown for each callout variant, keyed by variant id. */
-export const CALLOUT_META: Record<CalloutVariant, { icon: string; label: string }> = {
-  info: { icon: 'ℹ️', label: 'Info' },
-  note: { icon: '📝', label: 'Hinweis' },
-  warning: { icon: '⚠️', label: 'Warnung' },
-  error: { icon: '⛔', label: 'Fehler' }
+// Keywords include the German names as search aliases
+const VARIANT_META: Record<CalloutVariant, { icon: string; label: string; keywords: string[] }> = {
+  info: { icon: 'ℹ️', label: 'Info', keywords: ['info', 'information'] },
+  note: { icon: '📝', label: 'Note', keywords: ['note', 'hinweis', 'notiz', 'notice'] },
+  warning: { icon: '⚠️', label: 'Warning', keywords: ['warning', 'warnung', 'achtung', 'caution'] },
+  error: { icon: '⛔', label: 'Error', keywords: ['error', 'fehler', 'problem', 'danger'] }
 }
 
-/**
- * A Confluence/Jira-style callout panel: a colored box containing an icon
- * and arbitrary block content. Inserted via the `/info`, `/hinweis`,
- * `/warnung` and `/fehler` slash commands.
- */
+export function parseCalloutVariant(value: unknown): CalloutVariant {
+  return CALLOUT_VARIANTS.find((variant) => variant === value) ?? 'info'
+}
+
+// Colored panel with an icon and block content
 export const Callout = Node.create({
   name: 'callout',
   group: 'block',
@@ -27,10 +31,9 @@ export const Callout = Node.create({
     return {
       variant: {
         default: 'info' as CalloutVariant,
-        parseHTML: (element) =>
-          (element.getAttribute('data-callout-variant') as CalloutVariant) || 'info',
-        renderHTML: (attributes: { variant: CalloutVariant }) => ({
-          'data-callout-variant': attributes.variant
+        parseHTML: (element) => parseCalloutVariant(element.getAttribute('data-callout-variant')),
+        renderHTML: (attributes: { variant: unknown }) => ({
+          'data-callout-variant': parseCalloutVariant(attributes.variant)
         })
       }
     }
@@ -41,36 +44,34 @@ export const Callout = Node.create({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    const variant = (node.attrs.variant as CalloutVariant) || 'info'
-    const meta = CALLOUT_META[variant]
+    const { icon } = VARIANT_META[parseCalloutVariant(node.attrs.variant)]
     return [
       'div',
       mergeAttributes(HTMLAttributes, { 'data-callout': '', class: 'callout' }),
-      ['div', { class: 'callout-icon', contenteditable: 'false' }, meta.icon],
+      ['div', { class: 'callout-icon', contenteditable: 'false' }, icon],
       ['div', { class: 'callout-content' }, 0]
     ]
   }
 })
 
-/**
- * Replaces the `/command` range with an empty callout panel and places the
- * cursor inside it. `range.from` is captured before `deleteRange` collapses
- * the selection, so `from + 2` lands inside the callout's first paragraph
- * (+1 to enter the callout node, +1 to enter the paragraph).
- */
-export function insertCallout(editor: Editor, range: Range, variant: CalloutVariant): void {
-  const { from } = range
-  editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .insertContent({
-      type: 'callout',
-      attrs: { variant },
-      content: [{ type: 'paragraph' }]
-    })
-    .run()
-  editor.chain().focus().setTextSelection(from + 2).run()
+// The caret lands in the new panel's paragraph: one step into the callout, one into the paragraph
+function insertCallout(editor: Editor, range: Range, variant: CalloutVariant): void {
+  replaceRangeWith(editor, range, {
+    type: 'callout',
+    attrs: { variant },
+    content: [{ type: 'paragraph' }]
+  })
+  editor.chain().focus().setTextSelection(range.from + 2).run()
 }
 
-export default Callout
+export const calloutSlashItems: SlashItem[] = CALLOUT_VARIANTS.map((variant) => {
+  const { icon, label, keywords } = VARIANT_META[variant]
+  return {
+    id: `callout-${variant}`,
+    title: label,
+    description: `Insert a callout panel: ${label}`,
+    icon,
+    keywords,
+    run: (editor, range) => insertCallout(editor, range, variant)
+  }
+})

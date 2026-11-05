@@ -1,0 +1,64 @@
+.tiptap-editor .ProseMirror .jump-link {
+  display: inline-flex;
+  align-items: center;
+  color: #0078d4;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  cursor: pointer;
+}
+
+.tiptap-editor .ProseMirror .jump-link:hover {
+  color: #005a9e;
+}
+
+.dark .tiptap-editor .ProseMirror .jump-link {
+  color: #60a5fa;
+}
+
+.dark .tiptap-editor .ProseMirror .jump-link:hover {
+  color: #93c5fd;
+}
+
+.tiptap-editor .ProseMirror .toc-block,
+.tiptap-editor .ProseMirror .page-hierarchy-block {
+  margin: 0.4rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.dark .tiptap-editor .ProseMirror .toc-block,
+.dark .tiptap-editor .ProseMirror .page-hierarchy-block {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.tiptap-editor .ProseMirror .link-list-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+  margin-bottom: 0.3rem;
+}
+
+.dark .tiptap-editor .ProseMirror .link-list-title {
+  color: #9ca3af;
+}
+
+.tiptap-editor .ProseMirror .link-list-empty {
+  font-style: italic;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.tiptap-editor .ProseMirror .link-list {
+  list-style: none;
+  margin: 0;
+  padding-left: 0.25rem;
+}
+
+.tiptap-editor .ProseMirror .link-list-item {
+  line-height: 1.6;
+}

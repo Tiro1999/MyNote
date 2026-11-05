@@ -1,53 +1,68 @@
+import { notify } from '@renderer/ui'
 import { create } from 'zustand'
+import { allowedLinkUrl } from './allowedLinkUrl'
 
 const TRUST_STORAGE_KEY = 'mynote-trust-external-links'
+const BLOCKED_MESSAGE = 'This link type cannot be opened.'
 
-function readInitialTrust(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.localStorage.getItem(TRUST_STORAGE_KEY) === 'true'
+function readTrust(): boolean {
+  try {
+    return window.localStorage.getItem(TRUST_STORAGE_KEY) === 'true'
+  } catch {
+    // Unreadable storage means: ask every time
+    return false
+  }
 }
 
-interface ExternalLinkStore {
-  /** URL awaiting user confirmation before being opened, or null if no dialog is open. */
-  pendingUrl: string | null
-  /** Persisted user choice: skip the confirmation dialog and always open links directly. */
-  trustExternalLinks: boolean
+function storeTrust(): void {
+  try {
+    window.localStorage.setItem(TRUST_STORAGE_KEY, 'true')
+  } catch {
+    // The choice then holds for this session only
+  }
+}
 
-  /** Called from the editor's link click handler. Opens directly if already trusted,
-   * otherwise shows the confirmation dialog. */
-  requestOpen: (url: string) => void
-  /** Confirms opening the pending URL; optionally remembers the choice for next time. */
+function notifyBlocked(): void {
+  notify(BLOCKED_MESSAGE, 'error')
+}
+
+interface LinkStore {
+  pendingUrl: string | null
+  trustExternalLinks: boolean
+  requestOpen: (href: string) => void
   confirmOpen: (rememberChoice: boolean) => void
   cancel: () => void
 }
 
-/**
- * Backs the "Open External Link" confirmation dialog. Kept as a standalone
- * store (rather than part of notebookStore) because it must be reachable
- * from TipTap's vanilla-JS ProseMirror click handler (ExternalLinkGuard.ts),
- * not just from React components.
- */
-export const useExternalLinkStore = create<ExternalLinkStore>((set, get) => ({
+// A plain store, not React state: the link guard calls it from a ProseMirror handler
+export const useLinkStore = create<LinkStore>((set, get) => ({
   pendingUrl: null,
-  trustExternalLinks: readInitialTrust(),
+  trustExternalLinks: readTrust(),
 
-  requestOpen: (url) => {
-    if (get().trustExternalLinks) {
-      window.open(url, '_blank')
+  requestOpen: (href) => {
+    const url = allowedLinkUrl(href)
+    if (!url) {
+      notifyBlocked()
       return
     }
-    set({ pendingUrl: url })
+    if (get().trustExternalLinks) window.open(url, '_blank')
+    else set({ pendingUrl: url })
   },
 
   confirmOpen: (rememberChoice) => {
     const { pendingUrl } = get()
     if (!pendingUrl) return
+    set({ pendingUrl: null })
+    // The dialog showed pendingUrl, so exactly that string must pass the allowlist and open
+    if (allowedLinkUrl(pendingUrl) !== pendingUrl) {
+      notifyBlocked()
+      return
+    }
     if (rememberChoice) {
-      window.localStorage.setItem(TRUST_STORAGE_KEY, 'true')
+      storeTrust()
       set({ trustExternalLinks: true })
     }
     window.open(pendingUrl, '_blank')
-    set({ pendingUrl: null })
   },
 
   cancel: () => set({ pendingUrl: null })

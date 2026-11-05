@@ -9,12 +9,11 @@ import {
   parsePageContent,
   type CanvasElement,
   type PageContent,
-  type TextBoxElement
+  type TextBoxElement,
+  type TextBoxPatch
 } from './model'
 
 export const SAVE_DELAY_MS = 400
-
-type TextBoxPatch = Partial<Omit<TextBoxElement, 'id' | 'type'>>
 
 // Content together with the path it was loaded from, so a save never lands in another page
 interface Snapshot {
@@ -37,6 +36,7 @@ interface ContentState {
 let pendingSave: Snapshot | null = null
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 let loads = 0
+let closeHeld = false
 
 async function save({ path, content }: Snapshot): Promise<void> {
   try {
@@ -147,8 +147,6 @@ function followSelection(): void {
   useContentStore.setState({ ref: selection, path, content: null, error: null })
   if (selection && path) void load(selection, path, request)
 }
-
-let closeHeld = false
 
 // Text queued behind an in-flight write has not reached main yet, so the close waits for it
 function flushBeforeClose(event: BeforeUnloadEvent): void {

@@ -1,0 +1,58 @@
+.tiptap-editor .ProseMirror .callout {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0.4rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.tiptap-editor .ProseMirror .callout > .callout-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tiptap-editor .ProseMirror .callout > .callout-content p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-editor .ProseMirror .callout[data-callout-variant='info'] {
+  background: #e8f4fd;
+  border-color: #bfe3fb;
+}
+
+.tiptap-editor .ProseMirror .callout[data-callout-variant='note'] {
+  background: #f1f0ff;
+  border-color: #dcd8fb;
+}
+
+.tiptap-editor .ProseMirror .callout[data-callout-variant='warning'] {
+  background: #fff8e1;
+  border-color: #fbe6a3;
+}
+
+.tiptap-editor .ProseMirror .callout[data-callout-variant='error'] {
+  background: #fdecea;
+  border-color: #f8c6c0;
+}
+
+.dark .tiptap-editor .ProseMirror .callout[data-callout-variant='info'] {
+  background: #0c2d42;
+  border-color: #15496b;
+}
+
+.dark .tiptap-editor .ProseMirror .callout[data-callout-variant='note'] {
+  background: #241f3d;
+  border-color: #37305c;
+}
+
+.dark .tiptap-editor .ProseMirror .callout[data-callout-variant='warning'] {
+  background: #3a2f0c;
+  border-color: #5c4b15;
+}
+
+.dark .tiptap-editor .ProseMirror .callout[data-callout-variant='error'] {
+  background: #3a1210;
+  border-color: #5c1c18;
+}

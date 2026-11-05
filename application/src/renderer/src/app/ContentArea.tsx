@@ -1,5 +1,6 @@
 import { CanvasView } from '@renderer/canvas'
 import { useNotebookStore, type ContentRef } from '@renderer/notebook'
+import { editorFeatures } from './editorFeatures'
 
 export function contentKey(ref: ContentRef): string {
   return `${ref.kind}:${ref.id}`
@@ -15,5 +16,5 @@ export function ContentArea(): React.JSX.Element {
     )
   }
   // The key gives every content a fresh canvas (pan, zoom, editors)
-  return <CanvasView key={contentKey(selection)} />
+  return <CanvasView key={contentKey(selection)} features={editorFeatures} />
 }

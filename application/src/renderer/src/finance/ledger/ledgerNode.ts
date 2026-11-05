@@ -1,6 +1,7 @@
 import { Node } from '@tiptap/core'
 import type { Editor, Range } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
+import { replaceRangeWith } from '@renderer/editor'
 import LedgerBlock from './LedgerBlock'
 import { useFinanceStore } from '../store'
 
@@ -30,12 +31,5 @@ export const FinanceLedger = Node.create({
 /** Creates a new ledger (CSV + meta) then inserts a block referencing it. */
 export async function insertFinanceLedger(editor: Editor, range: Range): Promise<void> {
   const ledgerId = await useFinanceStore.getState().createLedger('Neues Ledger', '€')
-  editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .insertContent({ type: 'financeLedger', attrs: { ledgerId } })
-    .run()
+  replaceRangeWith(editor, range, { type: 'financeLedger', attrs: { ledgerId } })
 }
-
-export default FinanceLedger

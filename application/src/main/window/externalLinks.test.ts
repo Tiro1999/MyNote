@@ -58,6 +58,15 @@ describe('registerExternalLinks', () => {
     expect(send).not.toHaveBeenCalled()
   })
 
+  it('blocks a URL with a tab, newline, control character or backslash, which would open another host', () => {
+    const { open } = fakeWindow()
+    for (const url of ['https://good.com\t@example.net/', 'https://good.com\n@example.net/', 'https://good.com\u0001@example.net/', 'https://example.net\\.good.com/']) {
+      expect(open(url)).toEqual({ action: 'deny' })
+    }
+    expect(electron.shell.openExternal).not.toHaveBeenCalled()
+    expect(log.warn).toHaveBeenCalledTimes(4)
+  })
+
   it('blocks every other protocol with a warning', () => {
     const { open } = fakeWindow()
     for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'not a url']) {

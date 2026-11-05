@@ -1,4 +1,5 @@
-import { describeValue, isRecord } from '@renderer/storage'
+import { describeValue, isRecord, newId } from '@renderer/storage'
+import type { Point, Size } from './geometry'
 
 export interface TextBoxElement {
   id: string
@@ -11,6 +12,9 @@ export interface TextBoxElement {
   // TipTap JSON document
   content: Record<string, unknown>
 }
+
+// What an edit may change on a text box; the id and the type stay
+export type TextBoxPatch = Partial<Omit<TextBoxElement, 'id' | 'type'>>
 
 // An element type this version does not render, such as 'image' or 'file' from other branches
 export interface ForeignElement {
@@ -30,8 +34,10 @@ type Fields = Record<string, unknown>
 
 function numberOf(fields: Fields, key: string, where: string): number {
   const value = fields[key]
-  if (typeof value === 'number') return value
-  throw new Error(`${where}: ${key} must be a number, got ${describeValue(value)}`)
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  // JSON text cannot hold Infinity, but 1e999 parses to it, and describeValue would show null
+  const shown = typeof value === 'number' ? String(value) : describeValue(value)
+  throw new Error(`${where}: ${key} must be a number, got ${shown}`)
 }
 
 function fieldsOf(fields: Fields, key: string, where: string): Fields {
@@ -78,4 +84,18 @@ export function isTextBox(element: CanvasElement): element is TextBoxElement {
 
 export function emptyContent(pageId: string): PageContent {
   return { pageId, elements: [] }
+}
+
+const NEW_BOX_SIZE: Size = { width: 320, height: 200 }
+
+export function newTextBox(position: Point, zIndex: number): TextBoxElement {
+  return {
+    id: newId(),
+    type: 'textbox',
+    x: position.x,
+    y: position.y,
+    ...NEW_BOX_SIZE,
+    zIndex,
+    content: { type: 'doc', content: [{ type: 'paragraph' }] }
+  }
 }

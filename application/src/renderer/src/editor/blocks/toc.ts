@@ -1,30 +1,44 @@
-import { Node } from '@tiptap/core'
-import type { Editor, Range } from '@tiptap/core'
+import { findChildren, Node } from '@tiptap/core'
+import type { Editor } from '@tiptap/core'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import type { SlashItem } from '../feature'
+import { replaceRangeWith } from './insert'
+import { renderLinkListBlock, type LinkListItem } from './linkList'
 
 interface HeadingEntry {
-  pos: number
   level: number
   text: string
 }
 
-/** Scans the current document for headings, in document order. */
-function scanHeadings(editor: Editor): HeadingEntry[] {
-  const headings: HeadingEntry[] = []
-  editor.state.doc.descendants((node, pos) => {
-    if (node.type.name === 'heading') {
-      headings.push({ pos, level: node.attrs.level as number, text: node.textContent })
-    }
-  })
-  return headings
+const findHeadings = (doc: ProseMirrorNode): { node: ProseMirrorNode; pos: number }[] =>
+  findChildren(doc, (node) => node.type.name === 'heading')
+
+export function headingEntries(doc: ProseMirrorNode): HeadingEntry[] {
+  return findHeadings(doc).map(({ node }) => ({ level: node.attrs.level as number, text: node.textContent }))
 }
 
-/**
- * Live, self-updating table of contents (inserted via `/toc`). Stores no
- * snapshot of headings — it's an atom node with no content/attrs of its
- * own. Every time the document changes, its node view re-scans the page
- * for headings and re-renders, so adding, removing, renaming or reordering
- * headings updates the list immediately without needing to re-run `/toc`.
- */
+export function sameHeadings(a: HeadingEntry[], b: HeadingEntry[]): boolean {
+  return a.length === b.length && a.every((heading, index) => heading.level === b[index].level && heading.text === b[index].text)
+}
+
+export function headingLinks(headings: HeadingEntry[], onSelect: (index: number) => void): LinkListItem[] {
+  const topLevel = Math.min(...headings.map((heading) => heading.level))
+  return headings.map((heading, index) => ({
+    label: heading.text,
+    depth: heading.level - topLevel,
+    onClick: () => onSelect(index)
+  }))
+}
+
+// The position is looked up on click, so the list does not depend on where the headings sit
+function scrollToHeading(editor: Editor, index: number): void {
+  const heading = findHeadings(editor.state.doc)[index]
+  if (!heading) return
+  const dom = editor.view.nodeDOM(heading.pos) as HTMLElement | null
+  dom?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+// Live list of the headings in its own text box; no snapshot is saved
 export const TocBlock = Node.create({
   name: 'tocBlock',
   group: 'block',
@@ -46,66 +60,37 @@ export const TocBlock = Node.create({
       dom.setAttribute('data-toc-block', '')
       dom.setAttribute('contenteditable', 'false')
 
-      const render = (): void => {
-        const headings = scanHeadings(editor)
-
-        dom.innerHTML = ''
-        const title = document.createElement('div')
-        title.className = 'toc-block-title'
-        title.textContent = 'Inhaltsverzeichnis'
-        dom.appendChild(title)
-
-        if (headings.length === 0) {
-          const empty = document.createElement('div')
-          empty.className = 'toc-block-empty'
-          empty.textContent = 'Keine Überschriften auf dieser Seite gefunden.'
-          dom.appendChild(empty)
-          return
-        }
-
-        const minLevel = Math.min(...headings.map((h) => h.level))
-        const list = document.createElement('ul')
-        list.className = 'toc-block-list'
-        headings.forEach((heading) => {
-          const item = document.createElement('li')
-          item.className = 'toc-block-item'
-          item.style.marginLeft = `${(heading.level - minLevel) * 1}rem`
-          const link = document.createElement('span')
-          link.className = 'template-link'
-          link.textContent = heading.text || '(ohne Titel)'
-          link.addEventListener('click', (event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            const headingDom = editor.view.nodeDOM(heading.pos) as HTMLElement | null
-            headingDom?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          })
-          item.appendChild(link)
-          list.appendChild(item)
+      let shown: HeadingEntry[] | null = null
+      const refresh = (): void => {
+        const headings = headingEntries(editor.state.doc)
+        if (shown && sameHeadings(shown, headings)) return
+        shown = headings
+        renderLinkListBlock(dom, {
+          title: 'Table of contents',
+          emptyText: 'No headings found in this text box.',
+          items: headingLinks(headings, (index) => scrollToHeading(editor, index))
         })
-        dom.appendChild(list)
       }
 
-      render()
-
-      // Re-render on every document change, not just changes to this node
-      // (which never changes itself) — that's what makes the list "live".
-      const onUpdate = (): void => render()
-      editor.on('update', onUpdate)
+      refresh()
+      editor.on('update', refresh)
 
       return {
         dom,
         ignoreMutation: () => true,
         destroy: () => {
-          editor.off('update', onUpdate)
+          editor.off('update', refresh)
         }
       }
     }
   }
 })
 
-/** Replaces the `/toc` command range with a live table-of-contents block. */
-export function insertTableOfContents(editor: Editor, range: Range): void {
-  editor.chain().focus().deleteRange(range).insertContent({ type: 'tocBlock' }).run()
+export const tocSlashItem: SlashItem = {
+  id: 'table-of-contents',
+  title: 'Table of contents',
+  description: 'Links all headings of this text box and updates itself',
+  icon: '📑',
+  keywords: ['toc', 'table of contents', 'inhaltsverzeichnis', 'contents', 'überschriften', 'headings'],
+  run: (editor, range) => replaceRangeWith(editor, range, { type: 'tocBlock' })
 }
-
-export default TocBlock

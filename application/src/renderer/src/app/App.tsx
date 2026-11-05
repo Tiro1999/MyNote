@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ExternalLinkConfirmDialog, onLinkOpenFailed } from '@renderer/editor'
+import { LinkConfirmDialog, onLinkOpenFailed } from '@renderer/editor'
 import { Sidebar, WelcomeScreen, useNotebookStore } from '@renderer/notebook'
 import { SettingsButton, ThemeToggle } from '@renderer/settings'
 import { ContextMenuHost, Toaster, notify } from '@renderer/ui'
@@ -33,7 +33,7 @@ export default function App(): React.JSX.Element {
       ) : (
         <WelcomeScreen actions={actions} />
       )}
-      <ExternalLinkConfirmDialog />
+      <LinkConfirmDialog />
       <ContextMenuHost />
       <Toaster />
     </>

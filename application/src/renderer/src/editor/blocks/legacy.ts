@@ -1,16 +1,10 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import type { AnyExtension } from '@tiptap/core'
 import { useNotebookStore } from '@renderer/notebook'
+import { JUMP_LINK_CLASS, UNTITLED_LABEL } from './linkList'
 
-export type TemplateLinkKind = 'heading' | 'page'
-
-export interface TemplateLinkAttrs {
-  kind: TemplateLinkKind
-  targetId: string
-  label: string
-}
-
-// Legacy jump link: scrolls to a heading or opens a page, never an external URL
-export const TemplateLink = Node.create({
+// Load-only: v0.1.x pages contain it; with the node missing a page would load empty and the next save would erase it
+const TemplateLink = Node.create({
   name: 'templateLink',
   group: 'inline',
   inline: true,
@@ -19,7 +13,7 @@ export const TemplateLink = Node.create({
 
   addAttributes() {
     return {
-      kind: { default: 'page' as TemplateLinkKind },
+      kind: { default: 'page' },
       targetId: { default: null },
       label: { default: '' }
     }
@@ -36,7 +30,7 @@ export const TemplateLink = Node.create({
         'data-template-link': '',
         'data-kind': node.attrs.kind,
         'data-target-id': node.attrs.targetId,
-        class: 'template-link'
+        class: JUMP_LINK_CLASS
       }),
       node.attrs.label
     ]
@@ -45,23 +39,19 @@ export const TemplateLink = Node.create({
   addNodeView() {
     return ({ node }) => {
       const dom = document.createElement('span')
-      dom.className = 'template-link'
+      dom.className = JUMP_LINK_CLASS
       dom.setAttribute('data-template-link', '')
       dom.setAttribute('contenteditable', 'false')
       dom.dataset.kind = node.attrs.kind
       dom.dataset.targetId = node.attrs.targetId
-      dom.textContent = node.attrs.label || '(untitled)'
+      dom.textContent = node.attrs.label || UNTITLED_LABEL
 
+      // A heading target has no effect: headings carry no id
       dom.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        const { kind, targetId } = node.attrs as TemplateLinkAttrs
-        if (!targetId) return
-        if (kind === 'heading') {
-          const container = dom.closest('.tiptap-editor')
-          const target = container?.querySelector(`[data-heading-id="${CSS.escape(targetId)}"]`)
-          target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        } else {
+        const { kind, targetId } = node.attrs as { kind: string; targetId: string | null }
+        if (kind === 'page' && targetId) {
           useNotebookStore.getState().select({ kind: 'page', id: targetId })
         }
       })
@@ -71,4 +61,4 @@ export const TemplateLink = Node.create({
   }
 })
 
-export default TemplateLink
+export const legacyNodes: AnyExtension[] = [TemplateLink]

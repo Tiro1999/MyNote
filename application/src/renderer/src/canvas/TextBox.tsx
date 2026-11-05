@@ -1,120 +1,99 @@
-import { useCallback, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
-import Link from '@tiptap/extension-link'
-import TextAlign from '@tiptap/extension-text-align'
-import TableRow from '@tiptap/extension-table-row'
-import TableHeader from '@tiptap/extension-table-header'
-import TableCell from '@tiptap/extension-table-cell'
-import {
-  Callout,
-  TemplateLink,
-  HeadingWithId,
-  SlashCommand,
-  TocBlock,
-  PageHierarchyBlock,
-  ExternalLinkGuard,
-  TableWithControls,
-  Toolbar
-} from '@renderer/editor'
-// eslint-disable-next-line no-restricted-imports -- removed in phase 4
-import { FinanceLedger, FinanceStats } from '@renderer/finance'
-import { useContentStore } from './contentStore'
-import type { TextBoxElement } from './model'
+import { memo, useRef, useState } from 'react'
+import { EditorContent } from '@tiptap/react'
+import { Toolbar, useNoteEditor, type EditorFeature } from '@renderer/editor'
+import { usePointerDrag } from '@renderer/ui'
+import { dragOffset, movedBox, resizedBox, type Point } from './geometry'
+import type { TextBoxElement, TextBoxPatch } from './model'
 
 interface Props {
   element: TextBoxElement
-  onUpdate: (updates: Partial<TextBoxElement>) => void
-  onDelete: () => void
+  features: EditorFeature[]
+  zoom: number
+  focused: boolean
+  onFocus(id: string): void
+  onBlur(id: string): void
+  onUpdate(id: string, patch: TextBoxPatch): void
+  onCommit(id: string, patch: TextBoxPatch): void
+  onDelete(id: string): void
 }
 
-export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Element {
-  const [focused, setFocused] = useState(false)
-  const dragStart = useRef({ mouseX: 0, mouseY: 0, elX: 0, elY: 0 })
-  const resizeStart = useRef({ mouseX: 0, mouseY: 0, elW: 0, elH: 0 })
-  const didMove = useRef(false)
+const READ_ONLY_NOTICE =
+  'Read-only: this text box contains content this version cannot display. The stored content stays unchanged.'
 
-  // Anchors the slash command's page hierarchy to this content; a content switch remounts every box
-  const contentRef = useContentStore((state) => state.ref)
+function TextBox({
+  element,
+  features,
+  zoom,
+  focused,
+  onFocus,
+  onBlur,
+  onUpdate,
+  onCommit,
+  onDelete
+}: Props): React.JSX.Element {
+  const { id } = element
+  const [unreadable, setUnreadable] = useState(false)
+  const press = useRef<Point | null>(null)
+  // How far the pointer had come from the press when the drag started
+  const lead = useRef<Point>({ x: 0, y: 0 })
+  const moved = useRef(false)
+  const changed = useRef<TextBoxPatch | null>(null)
 
-  const editor = useEditor({
-    extensions: [
-      // Link and Underline follow below (Link for the link guard), so StarterKit's copies are off
-      StarterKit.configure({ heading: false, link: false, underline: false }),
-      HeadingWithId,
-      Underline,
-      Link.configure({ openOnClick: false }),
-      ExternalLinkGuard,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Callout,
-      TemplateLink,
-      TocBlock,
-      PageHierarchyBlock,
-      TableWithControls.configure({ resizable: false }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      FinanceLedger,
-      FinanceStats,
-      SlashCommand.configure({ context: { kind: contentRef?.kind ?? null, id: contentRef?.id ?? null } })
-    ],
-    content: element.content as object,
-    onUpdate: ({ editor }) => {
-      onUpdate({ content: editor.getJSON() as Record<string, unknown> })
-    }
+  const editor = useNoteEditor({
+    content: element.content,
+    features,
+    onUpdate: (json) => {
+      if (!unreadable) onCommit(id, { content: json as Record<string, unknown> })
+    },
+    onContentError: () => setUnreadable(true)
   })
 
-  // Drag the whole box when not in focused (text-edit) mode
-  const handleBoxMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (focused || e.button !== 0) return
-      e.stopPropagation()
-      didMove.current = false
-      dragStart.current = { mouseX: e.clientX, mouseY: e.clientY, elX: element.x, elY: element.y }
+  // The patch changes the store while dragging; one commit at the end saves it
+  const change = (patch: TextBoxPatch): void => {
+    moved.current = true
+    changed.current = patch
+    onUpdate(id, patch)
+  }
+  const finish = (): void => {
+    if (changed.current) onCommit(id, changed.current)
+    changed.current = null
+  }
 
-      const move = (ev: MouseEvent) => {
-        didMove.current = true
-        onUpdate({
-          x: dragStart.current.elX + (ev.clientX - dragStart.current.mouseX),
-          y: dragStart.current.elY + (ev.clientY - dragStart.current.mouseY)
-        })
-      }
-      const up = () => {
-        window.removeEventListener('mousemove', move)
-        window.removeEventListener('mouseup', up)
-      }
-      window.addEventListener('mousemove', move)
-      window.addEventListener('mouseup', up)
-    },
-    [focused, element.x, element.y, onUpdate]
+  // Each drag keeps the element of its start, so the deltas always count from there
+  const dragBox = usePointerDrag(
+    (dx, dy) => change(movedBox(element, dx + lead.current.x, dy + lead.current.y, zoom)),
+    finish
   )
+  const dragCorner = usePointerDrag((dx, dy) => change(resizedBox(element, dx, dy, zoom)), finish)
 
-  // Resize from the bottom-right handle
-  const handleResizeMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      resizeStart.current = {
-        mouseX: e.clientX,
-        mouseY: e.clientY,
-        elW: element.width,
-        elH: element.height
-      }
-      const move = (ev: MouseEvent) => {
-        onUpdate({
-          width: Math.max(120, resizeStart.current.elW + (ev.clientX - resizeStart.current.mouseX)),
-          height: Math.max(60, resizeStart.current.elH + (ev.clientY - resizeStart.current.mouseY))
-        })
-      }
-      const up = () => {
-        window.removeEventListener('mousemove', move)
-        window.removeEventListener('mouseup', up)
-      }
-      window.addEventListener('mousemove', move)
-      window.addEventListener('mouseup', up)
-    },
-    [element.width, element.height, onUpdate]
-  )
+  const handlePointerDown = (e: React.PointerEvent): void => {
+    if (focused || e.button !== 0) return
+    e.stopPropagation()
+    moved.current = false
+    press.current = { x: e.clientX, y: e.clientY }
+  }
+
+  // See documentation/software/renderer/canvas/canvas.md (why a drag starts after a few pixels)
+  const handlePointerMove = (e: React.PointerEvent): void => {
+    const from = press.current
+    if (!from) return
+    if ((e.buttons & 1) === 0) {
+      press.current = null
+      return
+    }
+    const offset = dragOffset(from, { x: e.clientX, y: e.clientY })
+    if (!offset) return
+    press.current = null
+    lead.current = offset
+    dragBox(e)
+  }
+
+  const handleCornerPointerDown = (e: React.PointerEvent): void => {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    moved.current = false
+    dragCorner(e)
+  }
 
   return (
     <div
@@ -127,7 +106,11 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
         height: element.height,
         zIndex: element.zIndex
       }}
-      onMouseDown={handleBoxMouseDown}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={() => {
+        press.current = null
+      }}
     >
       <div
         className={`flex h-full w-full flex-col overflow-hidden rounded-sm border bg-white text-gray-900 transition-shadow dark:bg-gray-900 dark:text-gray-100 ${
@@ -136,39 +119,44 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
             : 'border-transparent hover:border-gray-300 hover:shadow-xs dark:hover:border-gray-700'
         }`}
         onClick={() => {
-          if (!didMove.current) setFocused(true)
+          if (!moved.current) onFocus(id)
         }}
         onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node)) setFocused(false)
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onBlur(id)
         }}
         tabIndex={0}
       >
-        {focused && editor && <Toolbar editor={editor} />}
+        {unreadable && (
+          <p
+            role="alert"
+            className="bg-amber-100 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          >
+            {READ_ONLY_NOTICE}
+          </p>
+        )}
+        {focused && !unreadable && editor && <Toolbar editor={editor} />}
         <EditorContent
           editor={editor}
           className="tiptap-editor flex-1 cursor-text overflow-auto p-2 text-gray-900 dark:text-gray-100"
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             if (focused) e.stopPropagation()
           }}
         />
       </div>
 
-      {/* Delete button — visible on hover when not in text-edit mode */}
       {!focused && (
         <button
+          aria-label="Delete text box"
           className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs
                      items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity
                      hidden group-hover:flex leading-none"
-          onMouseDown={(e) => {
-            e.stopPropagation()
-            onDelete()
-          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onDelete(id)}
         >
           ×
         </button>
       )}
 
-      {/* Resize handle */}
       <div
         className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize
                    opacity-0 group-hover:opacity-100 transition-opacity"
@@ -176,8 +164,10 @@ export default function TextBox({ element, onUpdate, onDelete }: Props): JSX.Ele
           background: 'linear-gradient(135deg, transparent 50%, #94a3b8 50%)',
           borderBottomRightRadius: '2px'
         }}
-        onMouseDown={handleResizeMouseDown}
+        onPointerDown={handleCornerPointerDown}
       />
     </div>
   )
 }
+
+export default memo(TextBox)

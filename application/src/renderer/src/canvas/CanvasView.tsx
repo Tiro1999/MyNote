@@ -1,192 +1,88 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
-import { nanoid } from 'nanoid'
-import TextBox from './TextBox'
+import { useCallback, useMemo, useState } from 'react'
+import type { EditorFeature } from '@renderer/editor'
+import { CULL_MARGIN, cull, nextZIndex, screenToCanvas, visibleRect } from './geometry'
 import Minimap from './Minimap'
+import { isTextBox, newTextBox } from './model'
+import TextBox from './TextBox'
 import { useContentStore } from './contentStore'
-import { isTextBox, type TextBoxElement } from './model'
+import { useViewport } from './useViewport'
+import ZoomControls from './ZoomControls'
 
-const MIN_ZOOM = 0.2
-const MAX_ZOOM = 3.0
+interface Props {
+  features: EditorFeature[]
+}
 
-export default function CanvasView(): JSX.Element {
+export default function CanvasView({ features }: Props): React.JSX.Element {
   const content = useContentStore((state) => state.content)
   const error = useContentStore((state) => state.error)
   const addElement = useContentStore((state) => state.addElement)
+  const updateElement = useContentStore((state) => state.updateElement)
   const commitElement = useContentStore((state) => state.commitElement)
   const deleteElement = useContentStore((state) => state.deleteElement)
 
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 40, y: 40 })
-  const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 })
-  const isPanning = useRef(false)
-  const lastMouse = useRef({ x: 0, y: 0 })
-  const viewportRef = useRef<HTMLDivElement>(null)
+  const { ref, viewport, size, panHandlers, step, reset, navigateTo } = useViewport()
+  const [focusedId, setFocusedId] = useState<string | null>(null)
+  const focus = useCallback((id: string) => setFocusedId(id), [])
+  const blur = useCallback((id: string) => setFocusedId((current) => (current === id ? null : current)), [])
 
-  // Ctrl+Scroll → zoom; plain scroll → pan
-  const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault()
-    if (e.ctrlKey || e.metaKey) {
-      setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z - e.deltaY * 0.001)))
-    } else {
-      setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }))
-    }
-  }, [])
+  // Only text boxes are drawn; other elements stay in the content and are saved with it
+  const boxes = useMemo(() => (content?.elements ?? []).filter(isTextBox), [content])
+  const measured = size.width > 0 && size.height > 0
+  const mounted = measured
+    ? cull(boxes, visibleRect(viewport, size.width, size.height, CULL_MARGIN), focusedId)
+    : boxes
 
-  useEffect(() => {
-    const el = viewportRef.current
-    if (!el) return
-    el.addEventListener('wheel', handleWheel, { passive: false })
-    return () => el.removeEventListener('wheel', handleWheel)
-  }, [handleWheel])
-
-  // Track the viewport size so we can render only the elements currently in view.
-  useEffect(() => {
-    const el = viewportRef.current
-    if (!el) return
-    const measure = (): void => setViewportSize({ w: el.clientWidth, h: el.clientHeight })
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Middle-click or Alt+Left-click → pan
-    if (e.button === 1 || (e.button === 0 && e.altKey)) {
-      isPanning.current = true
-      lastMouse.current = { x: e.clientX, y: e.clientY }
-      e.preventDefault()
-    }
+  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+    if (e.target !== e.currentTarget) return
+    const origin = e.currentTarget.getBoundingClientRect()
+    const point = screenToCanvas({ x: e.clientX - origin.left, y: e.clientY - origin.top }, viewport)
+    addElement(newTextBox(point, nextZIndex(boxes)))
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning.current) return
-    const dx = e.clientX - lastMouse.current.x
-    const dy = e.clientY - lastMouse.current.y
-    lastMouse.current = { x: e.clientX, y: e.clientY }
-    setPan((p) => ({ x: p.x + dx, y: p.y + dy }))
-  }
-
-  const handleMouseUp = () => {
-    isPanning.current = false
-  }
-
-  // Culling keeps the text boxes in view plus half a screen; all of them until the size is measured
-  const elements = (content?.elements ?? []).filter(isTextBox)
-  const culling = viewportSize.w > 0 && viewportSize.h > 0
-  const marginX = (viewportSize.w / zoom) * 0.5
-  const marginY = (viewportSize.h / zoom) * 0.5
-  const viewLeft = -pan.x / zoom - marginX
-  const viewTop = -pan.y / zoom - marginY
-  const viewRight = (viewportSize.w - pan.x) / zoom + marginX
-  const viewBottom = (viewportSize.h - pan.y) / zoom + marginY
-  const visibleElements = culling
-    ? elements.filter(
-        (el) =>
-          el.x < viewRight &&
-          el.x + el.width > viewLeft &&
-          el.y < viewBottom &&
-          el.y + el.height > viewTop
-      )
-    : elements
-
-  // The actual visible canvas rectangle (no cull buffer) for the minimap.
-  const viewRect = {
-    left: -pan.x / zoom,
-    top: -pan.y / zoom,
-    right: (viewportSize.w - pan.x) / zoom,
-    bottom: (viewportSize.h - pan.y) / zoom
-  }
-  const navigateTo = (cx: number, cy: number): void => {
-    setPan({ x: viewportSize.w / 2 - cx * zoom, y: viewportSize.h / 2 - cy * zoom })
-  }
-
-  // Double-click on the background → create a new text box at cursor position
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[data-canvas-element]')) return
-    const rect = viewportRef.current!.getBoundingClientRect()
-    const x = (e.clientX - rect.left - pan.x) / zoom
-    const y = (e.clientY - rect.top - pan.y) / zoom
-    const el: TextBoxElement = {
-      id: nanoid(),
-      type: 'textbox',
-      x,
-      y,
-      width: 320,
-      height: 200,
-      zIndex: (content?.elements.length ?? 0) + 1,
-      content: { type: 'doc', content: [{ type: 'paragraph' }] }
-    }
-    addElement(el)
-  }
+  const isEmpty = content !== null && content.elements.length === 0
 
   return (
     <div
-      ref={viewportRef}
+      ref={ref}
       className="relative h-full w-full overflow-hidden bg-[#f0f0f0] dark:bg-[#111827]"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onPointerDown={panHandlers.onPointerDown}
+      onMouseDown={panHandlers.onMouseDown}
       onDoubleClick={handleDoubleClick}
     >
-      {/* Transformed canvas surface */}
       <div
         className="absolute origin-top-left"
-        style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+        style={{
+          transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})`
+        }}
       >
-        {visibleElements.map((el) => (
+        {mounted.map((box) => (
           <TextBox
-            key={el.id}
-            element={el}
-            onUpdate={(updates) => commitElement(el.id, updates)}
-            onDelete={() => deleteElement(el.id)}
+            key={box.id}
+            element={box}
+            features={features}
+            zoom={viewport.zoom}
+            focused={box.id === focusedId}
+            onFocus={focus}
+            onBlur={blur}
+            onUpdate={updateElement}
+            onCommit={commitElement}
+            onDelete={deleteElement}
           />
         ))}
       </div>
 
-      {/* Bottom-right: overview minimap + zoom/pan HUD */}
       <div className="absolute bottom-3 right-4 flex flex-col items-end gap-2 select-none">
-        {elements.length > 0 && viewportSize.w > 0 && (
+        {boxes.length > 0 && measured && (
           <Minimap
-            elements={elements.map((el) => ({
-              id: el.id,
-              x: el.x,
-              y: el.y,
-              width: el.width,
-              height: el.height
-            }))}
-            viewport={viewRect}
+            boxes={boxes}
+            view={visibleRect(viewport, size.width, size.height, 0)}
             onNavigate={navigateTo}
           />
         )}
-        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-300">
-          <button
-            className="rounded-sm border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-            onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}
-          >
-            −
-          </button>
-          <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-          <button
-            className="rounded-sm border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-            onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}
-          >
-            +
-          </button>
-          <button
-            className="ml-1 rounded-sm border border-gray-200 bg-white px-2 py-0.5 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-            onClick={() => {
-              setZoom(1)
-              setPan({ x: 40, y: 40 })
-            }}
-          >
-            Reset
-          </button>
-        </div>
+        <ZoomControls zoom={viewport.zoom} onStep={step} onReset={reset} />
       </div>
 
-      {/* Load error, otherwise the empty-page hint */}
-      {(error || elements.length === 0) && (
+      {(error || isEmpty) && (
         <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
           {error ? (
             <p role="alert" className="text-sm wrap-anywhere text-red-600 dark:text-red-400">

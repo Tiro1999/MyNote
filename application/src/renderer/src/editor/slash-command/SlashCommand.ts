@@ -1,91 +1,56 @@
 import { Extension } from '@tiptap/core'
-import Suggestion from '@tiptap/suggestion'
 import { PluginKey } from '@tiptap/pm/state'
 import { ReactRenderer } from '@tiptap/react'
-import SlashCommandMenu, { type SlashCommandMenuHandle } from './SlashMenu'
-import { filterTemplateCommands } from './items'
-import type { TemplateCommand, TemplateCommandContext } from '../feature'
+import Suggestion from '@tiptap/suggestion'
+import { filterSlashItems, type SlashItem } from '../feature'
+import { SlashMenu, type SlashMenuHandle, type SlashMenuProps } from './SlashMenu'
 
-export const SlashCommandPluginKey = new PluginKey('slashCommand')
+const SlashCommandPluginKey = new PluginKey('slashCommand')
 
 export interface SlashCommandOptions {
-  /** Identifies the currently open chapter/page, forwarded to structural commands. */
-  context: TemplateCommandContext
+  items: SlashItem[]
 }
 
-/**
- * Jira/Confluence-style `/` slash-command menu. Wraps `@tiptap/suggestion`
- * and renders `SlashCommandMenu` via a `ReactRenderer`, positioned manually
- * with `clientRect()` — no tippy.js, consistent with the app's other custom
- * popovers (see `Canvas/Toolbar.tsx`).
- */
+// The `/` menu: Suggestion mounts a React menu at the caret and positions it with Floating UI
 export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
 
   addOptions() {
-    return {
-      context: { kind: null, id: null }
-    }
+    return { items: [] }
   },
 
   addProseMirrorPlugins() {
-    const context = this.options.context
+    const { items } = this.options
 
     return [
-      Suggestion<TemplateCommand>({
+      Suggestion<SlashItem>({
         editor: this.editor,
         char: '/',
         pluginKey: SlashCommandPluginKey,
-        allowSpaces: false,
-        startOfLine: false,
-        items: ({ query }) => filterTemplateCommands(query).slice(0, 20),
-        command: ({ editor, range, props }) => {
-          props.action(editor, range, context)
-        },
+        items: ({ query }) => filterSlashItems(items, query),
+        command: ({ editor, range, props }) => props.run(editor, range),
         render: () => {
-          let renderer: ReactRenderer<SlashCommandMenuHandle, { items: TemplateCommand[]; command: (item: TemplateCommand) => void }> | null =
-            null
-          let element: HTMLElement | null = null
-
-          const position = (rect: DOMRect | null): void => {
-            if (!element || !rect) return
-            element.style.position = 'fixed'
-            element.style.left = `${rect.left}px`
-            element.style.top = `${rect.bottom + 4}px`
-            element.style.zIndex = '1000'
-          }
+          let renderer: ReactRenderer<SlashMenuHandle, SlashMenuProps> | null = null
+          let unmount: (() => void) | null = null
 
           return {
             onStart: (props) => {
-              renderer = new ReactRenderer(SlashCommandMenu, {
+              renderer = new ReactRenderer(SlashMenu, {
                 editor: props.editor,
-                props: { items: props.items, command: props.command }
+                props: { items: props.items, command: props.command },
+                className: 'z-50'
               })
-              element = renderer.element as HTMLElement
-              document.body.appendChild(element)
-              position(props.clientRect?.() ?? null)
+              unmount = props.mount(renderer.element)
             },
 
-            onUpdate: (props) => {
-              renderer?.updateProps({ items: props.items, command: props.command })
-              position(props.clientRect?.() ?? null)
-            },
+            onUpdate: (props) => renderer?.updateProps({ items: props.items, command: props.command }),
 
-            onKeyDown: (props) => {
-              if (props.event.key === 'Escape') {
-                element?.remove()
-                renderer?.destroy()
-                element = null
-                renderer = null
-                return true
-              }
-              return renderer?.ref?.onKeyDown({ event: props.event }) ?? false
-            },
+            onKeyDown: (props) => renderer?.ref?.onKeyDown(props) ?? false,
 
             onExit: () => {
-              element?.remove()
+              unmount?.()
               renderer?.destroy()
-              element = null
+              unmount = null
               renderer = null
             }
           }
@@ -94,5 +59,3 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
     ]
   }
 })
-
-export default SlashCommand

@@ -1,97 +1,75 @@
-import { useMemo, useRef } from 'react'
-
-interface Rect {
-  left: number
-  top: number
-  right: number
-  bottom: number
-}
+import { useRef, useState } from 'react'
+import { usePointerDrag } from '@renderer/ui'
+import {
+  contentBounds,
+  fromMinimap,
+  inflate,
+  minimapTransform,
+  toMinimap,
+  type Point,
+  type Rect,
+  type Size
+} from './geometry'
 
 interface Props {
-  elements: Array<{ id: string; x: number; y: number; width: number; height: number }>
-  viewport: Rect
-  onNavigate: (contentX: number, contentY: number) => void
+  boxes: Array<Rect & { id: string }>
+  view: Rect
+  onNavigate(point: Point): void
 }
 
-const MAP_W = 180
-const MAP_H = 120
-const PAD = 60 // content-space padding around the extent
+const MAP_SIZE: Size = { width: 180, height: 120 }
+const PADDING = 60
+const MIN_MARK = 2
 
-/**
- * Overview map of the canvas: every element as a small box plus a rectangle for
- * the current viewport. Clicking or dragging inside it recenters the canvas on
- * that content point — a way to find elements after panning/zooming away.
- */
-export default function Minimap({ elements, viewport, onNavigate }: Props): JSX.Element {
-  const ref = useRef<HTMLDivElement>(null)
-  const dragging = useRef(false)
+function markStyle(rect: Rect): React.CSSProperties {
+  return {
+    left: rect.x,
+    top: rect.y,
+    width: Math.max(MIN_MARK, rect.width),
+    height: Math.max(MIN_MARK, rect.height)
+  }
+}
 
-  const bounds = useMemo(() => {
-    let minX = viewport.left
-    let minY = viewport.top
-    let maxX = viewport.right
-    let maxY = viewport.bottom
-    for (const el of elements) {
-      minX = Math.min(minX, el.x)
-      minY = Math.min(minY, el.y)
-      maxX = Math.max(maxX, el.x + el.width)
-      maxY = Math.max(maxY, el.y + el.height)
-    }
-    return { minX: minX - PAD, minY: minY - PAD, maxX: maxX + PAD, maxY: maxY + PAD }
-  }, [elements, viewport])
+// See documentation/software/renderer/canvas/coordinate-model.drawio.svg
+export default function Minimap({ boxes, view, onNavigate }: Props): React.JSX.Element {
+  const [frozen, setFrozen] = useState<Rect | null>(null)
+  const pressed = useRef<Point>({ x: 0, y: 0 })
+  const bounds = frozen ?? inflate(contentBounds(boxes, view), PADDING)
+  const transform = minimapTransform(bounds, MAP_SIZE)
 
-  const scale = Math.min(
-    MAP_W / Math.max(1, bounds.maxX - bounds.minX),
-    MAP_H / Math.max(1, bounds.maxY - bounds.minY)
+  // The drag keeps the transform of the pointerdown, so the map stands still while it is dragged
+  const startDrag = usePointerDrag(
+    (dx, dy) => onNavigate(fromMinimap({ x: pressed.current.x + dx, y: pressed.current.y + dy }, transform)),
+    () => setFrozen(null)
   )
-  const toMapX = (x: number): number => (x - bounds.minX) * scale
-  const toMapY = (y: number): number => (y - bounds.minY) * scale
 
-  const navigateFromEvent = (e: React.MouseEvent): void => {
-    const rect = ref.current!.getBoundingClientRect()
-    onNavigate(bounds.minX + (e.clientX - rect.left) / scale, bounds.minY + (e.clientY - rect.top) / scale)
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    const map = e.currentTarget.getBoundingClientRect()
+    pressed.current = { x: e.clientX - map.left, y: e.clientY - map.top }
+    setFrozen(bounds)
+    onNavigate(fromMinimap(pressed.current, transform))
+    startDrag(e)
   }
 
   return (
     <div
-      ref={ref}
       className="relative cursor-pointer overflow-hidden rounded-sm border border-gray-300 bg-white/80 shadow-xs dark:border-gray-700 dark:bg-gray-800/80"
-      style={{ width: MAP_W, height: MAP_H }}
-      title="Übersicht — klicken/ziehen zum Navigieren"
-      onMouseDown={(e) => {
-        dragging.current = true
-        navigateFromEvent(e)
-      }}
-      onMouseMove={(e) => {
-        if (dragging.current) navigateFromEvent(e)
-      }}
-      onMouseUp={() => {
-        dragging.current = false
-      }}
-      onMouseLeave={() => {
-        dragging.current = false
-      }}
+      style={MAP_SIZE}
+      title="Overview — click or drag to navigate"
+      onPointerDown={handlePointerDown}
     >
-      {elements.map((el) => (
+      {boxes.map((box) => (
         <div
-          key={el.id}
+          key={box.id}
           className="absolute rounded-[1px] bg-blue-400/70"
-          style={{
-            left: toMapX(el.x),
-            top: toMapY(el.y),
-            width: Math.max(2, el.width * scale),
-            height: Math.max(2, el.height * scale)
-          }}
+          style={markStyle(toMinimap(box, transform))}
         />
       ))}
       <div
         className="absolute border border-red-500 bg-red-500/10"
-        style={{
-          left: toMapX(viewport.left),
-          top: toMapY(viewport.top),
-          width: Math.max(2, (viewport.right - viewport.left) * scale),
-          height: Math.max(2, (viewport.bottom - viewport.top) * scale)
-        }}
+        style={markStyle(toMinimap(view, transform))}
       />
     </div>
   )

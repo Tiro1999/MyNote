@@ -103,6 +103,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => {
 
     setActiveNotebook: (id) => set({ activeNotebookId: id, selection: null }),
 
+    // The content store follows a new selection object, so a re-click that retries a failed load needs a fresh ref
     select: (ref) => {
       const found = tree.locate(get().notebooks, ref)
       if (found) set({ selection: ref, activeNotebookId: found.notebook.id })

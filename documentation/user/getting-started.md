@@ -72,8 +72,9 @@ Each **page** is a free-form canvas — no fixed layout, no Markdown.
 | **Add text box** | Double-click on an empty area of the canvas |
 | **Move text box** | Drag the box border (when not in text-edit mode) |
 | **Resize text box** | Drag the ↘ handle at the bottom-right corner |
-| **Pan canvas** | Alt + Left-drag, or middle-mouse drag |
-| **Zoom** | Ctrl + Scroll wheel |
+| **Pan canvas** | Scroll wheel on the empty canvas, Alt + Left-drag, or middle-mouse drag |
+| **Scroll a text box** | Scroll wheel over the box |
+| **Zoom** | Ctrl + Scroll wheel (also over a text box) |
 | **Zoom buttons** | `−` / `+` controls in the bottom-right corner |
 | **Reset view** | Click **Reset** in the bottom-right corner |
 
@@ -118,8 +119,8 @@ All standard keyboard shortcuts work inside a text box (`Ctrl+Z`, `Ctrl+A`, etc.
 
 1. Select text in a text box.
 2. Click the **🔗** button in the toolbar.
-3. A dialog asks whether to open the file picker or type a URL manually:
-   - **File picker** → opens the system file browser so you can link to a local file.
-   - **Type URL** → paste any web address.
+3. Type or paste a web address (or a `mailto:` address) and press **Enter**. An address without a scheme, such as `example.com`, gets `https://`.
 
-To remove a link, click inside linked text and click **🔗✕** in the toolbar.
+To change a link, click inside it, click **🔗** and type the new address. To remove it, click **🔗✕** in the toolbar, or empty the address field and press **Enter**.
+
+Clicking a link asks before it opens outside MyNote in your default browser. Only `http:`, `https:` and `mailto:` links open; any other link shows the message "This link type cannot be opened." Links to local files are not supported.

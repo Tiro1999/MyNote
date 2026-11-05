@@ -1,6 +1,7 @@
 import { Node } from '@tiptap/core'
 import type { Editor, Range } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
+import { replaceRangeWith } from '@renderer/editor'
 import StatisticsBlock from './StatisticsBlock'
 
 export const FinanceStats = Node.create({
@@ -34,7 +35,5 @@ export const FinanceStats = Node.create({
 })
 
 export function insertFinanceStats(editor: Editor, range: Range): void {
-  editor.chain().focus().deleteRange(range).insertContent({ type: 'financeStats' }).run()
+  replaceRangeWith(editor, range, { type: 'financeStats' })
 }
-
-export default FinanceStats
