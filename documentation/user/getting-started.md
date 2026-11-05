@@ -1,17 +1,19 @@
 # Getting Started with MyNote
 
-## Download & install
+How to install MyNote, open a notebook folder and work with chapters, pages, text boxes, links and the finance ledger.
+
+## Download and install
 
 Download the latest release from the [Releases](https://github.com/Tiro1999/MyNote/releases) page.
 
 | Platform | File |
 |----------|------|
-| Windows  | `MyNote-Setup-vX.Y.Z.exe` |
-| macOS    | `MyNote-vX.Y.Z.dmg` |
-| Linux    | `MyNote-vX.Y.Z.AppImage` |
+| Windows  | `.exe` installer |
+| macOS    | `.dmg` (one for Intel, one for Apple silicon) |
+| Linux    | `.AppImage` |
 
 ### Windows
-Run the installer. No administrator rights required (per-user install by default).
+Run the installer. It is a wizard: choose the install folder and whether to install only for you (the default, no administrator rights needed) or for all users.
 
 > **"Windows protected your PC"?** MyNote is a small open-source app and isn't
 > signed with a paid code-signing certificate, so Windows SmartScreen shows a
@@ -37,66 +39,84 @@ chmod +x MyNote-*.AppImage
    - `Documents/MyNotes` (local)
    - A mapped network drive or NAS share
    - A folder synced by OneDrive, Dropbox, or Nextcloud
-3. MyNote creates a `notebooks.json` manifest in that folder on first use.
+3. An empty folder opens as an empty workspace. MyNote writes `notebooks.json` when you create your first notebook.
 
-Your notes stay entirely in that folder. Back it up any way you like.
+Your notes stay entirely in that folder. Back it up any way you like; see [network and cloud storage](network-storage.md). The light/dark choice and the settings are stored per device, not in the folder.
+
+Starting MyNote a second time brings the running window to the front. If `notebooks.json` is damaged, the welcome screen shows "Couldn't open the notebook folder: …" and changes nothing; the stored format is described in the [file format](../software/file-format/file-format.md).
 
 ---
 
 ## Staying up to date
 
-On **Windows** and **Linux**, MyNote checks for new versions automatically each
-time you start it. When a newer release is available it downloads in the
-background and installs the next time you quit and reopen the app — you don't
-need to visit the Releases page again.
+On **Windows** and **Linux**, the installed app checks for new versions each time you start it. A newer release downloads in the background, a notification says "Update ready", and the update installs when you quit.
 
 > Updates only appear once a version has been *published* on the Releases page.
 > Drafts and pre-releases are invisible to the updater.
 
-**Prefer to update manually?** Open **⚙️ Settings** (top of the sidebar, or the
-top-right of the welcome screen) and turn **Automatic updates** off. While it's
-off, MyNote never contacts GitHub — you decide when to grab a new release.
+Open **⚙️ Settings** (top of the sidebar, or top-right of the welcome screen):
 
-On **macOS**, auto-update isn't available (it requires Apple code signing), so
-grab the newest `.dmg` from the [Releases](https://github.com/Tiro1999/MyNote/releases) page when you want
-to update.
+| Control | Effect |
+|---------|--------|
+| **Automatic updates** switch | Off: MyNote does not check at startup, you update from the Releases page. Turning it on checks at once. |
+| **Check for updates** | Checks now, even when automatic updates are off, and shows the result next to the button. |
+
+On **macOS** there is no update feed: the check answers "Updates are not available on macOS yet. Download new versions from GitHub Releases.", so grab the newest `.dmg` yourself.
+
+The **Light**/**Dark** button next to ⚙️ switches the theme (dark by default).
+
+---
+
+## Notebooks, chapters and pages
+
+```
+Notebook
+ └── Chapter
+      └── Page
+           └── Subpage
+```
+
+| To … | Do this |
+|------|---------|
+| Create a notebook | **+ New** at the top of the sidebar |
+| Open a notebook | Click its name; its chapters appear below |
+| Add a chapter | **+ Chapter** below the chapters of the open notebook |
+| Add a page | **+ Page** below a chapter's pages, the **+** that shows when you hover a chapter, or right-click the chapter → **New page** |
+| Add a subpage | Hover a page and click **+**, or right-click it → **New subpage** |
+| Open a chapter, page or subpage | Click it. A chapter has a canvas of its own (its chapter note) |
+| Rename | Right-click → **Rename** (notebooks too) |
+| Delete | Right-click a chapter or page → **Delete**. It asks first, then deletes the entry and everything below it permanently, including their files in the notebook folder. A notebook cannot be deleted in the app |
+| Fold | ▸ / ▾ in front of an entry that has pages below it |
+
+New pages are called "Untitled Page".
 
 ---
 
 ## The canvas
 
-Each **page** is a free-form canvas — no fixed layout, no Markdown.
+Each chapter and page is a free-form canvas — no fixed layout, no Markdown.
 
 | Action | How |
 |--------|-----|
 | **Add text box** | Double-click on an empty area of the canvas |
-| **Move text box** | Drag the box border (when not in text-edit mode) |
-| **Resize text box** | Drag the ↘ handle at the bottom-right corner |
-| **Pan canvas** | Scroll wheel on the empty canvas, Alt + Left-drag, or middle-mouse drag |
-| **Scroll a text box** | Scroll wheel over the box |
-| **Zoom** | Ctrl + Scroll wheel (also over a text box) |
-| **Zoom buttons** | `−` / `+` controls in the bottom-right corner |
-| **Reset view** | Click **Reset** in the bottom-right corner |
+| **Edit** | Click inside the text box; the toolbar appears at its top. Click outside to finish |
+| **Move** | Press on a text box that is not being edited and drag (a plain click does not move it) |
+| **Resize** | Drag the ↘ handle at the bottom-right corner (it shows on hover); the minimum is 120 × 60 |
+| **Delete** | The red **×** at the top-right corner when you hover a text box that is not being edited; it asks nothing |
+| **Pan** | Scroll wheel on the empty canvas, Alt + left-drag on the empty canvas, or middle-mouse drag |
+| **Scroll a text box** | Scroll wheel over the box (the canvas does not move) |
+| **Zoom** | Ctrl (⌘ on macOS) + scroll wheel, also over a text box |
+| **Zoom buttons** | `−` / `+` in the bottom-right corner, 10 % per step between 20 % and 300 % |
+| **Reset view** | **Reset** in the bottom-right corner |
+| **Overview** | The small map above the zoom buttons shows all text boxes; click or drag in it to jump there |
 
----
-
-## Organizing notes
-
-```
-Notebook
- └── Section (tab)
-      └── Page
-```
-
-- **+ New** (top of sidebar) → create a notebook
-- **+ Section** (under a notebook) → add a section
-- **+ Page** (under a section) → add a page
+Pan and zoom are not saved. An empty page shows "Double-click anywhere to add a text box". If a page cannot be read, a red message appears and the page is left unchanged. A text box that holds content this version cannot display opens read-only with a notice; you can still move and resize it and its content stays as stored.
 
 ---
 
 ## Formatting text
 
-Click inside a text box to enter edit mode. The toolbar appears at the top of the box.
+Click inside a text box to edit it. The toolbar appears at the top of the box.
 
 | Button | Action |
 |--------|--------|
@@ -108,10 +128,22 @@ Click inside a text box to enter edit mode. The toolbar appears at the top of th
 | • List | Bullet list |
 | 1. List | Numbered list |
 | `</>` | Code block |
-| 🔗 | Insert link |
-| 🔗✕ | Remove link (appears when cursor is inside a link) |
+| 🔗 | Insert or edit a link |
+| 🔗✕ | Remove link (appears when the cursor is inside a link) |
 
 All standard keyboard shortcuts work inside a text box (`Ctrl+Z`, `Ctrl+A`, etc.).
+
+### Blocks with `/`
+
+Type `/` in a text box, keep typing to filter, choose with ↑ ↓ and Enter or a click.
+
+| Entry | Inserts |
+|-------|---------|
+| Info, Note, Warning, Error | A colored callout panel |
+| Table of contents | A list of the headings in this text box; it updates itself and a click scrolls to the heading |
+| Page hierarchy | A list of the pages of this chapter, or the subpages of this page; it updates itself and a click opens the page |
+| Table | A 3 × 3 table. Hover a row or column boundary and click **+** to add one; right-click a cell for **Insert row above/below**, **Insert column left/right**, **Delete row/column/table**. Deleting the last row or column deletes the table |
+| Ledger (income and expenses), Statistics | See [Finance](finance.md) |
 
 ---
 
@@ -119,8 +151,16 @@ All standard keyboard shortcuts work inside a text box (`Ctrl+Z`, `Ctrl+A`, etc.
 
 1. Select text in a text box.
 2. Click the **🔗** button in the toolbar.
-3. Type or paste a web address (or a `mailto:` address) and press **Enter**. An address without a scheme, such as `example.com`, gets `https://`.
+3. Type or paste a web address (or a `mailto:` address) and press **Enter** or **OK**. An address without a scheme, such as `example.com`, gets `https://`.
 
-To change a link, click inside it, click **🔗** and type the new address. To remove it, click **🔗✕** in the toolbar, or empty the address field and press **Enter**.
+Only `http:`, `https:` and `mailto:` links are accepted. Anything else, an address with spaces, or a local file path is refused with "Enter a web address or a mailto: link." and changes nothing. Links to local files are not supported.
 
-Clicking a link asks before it opens outside MyNote in your default browser. Only `http:`, `https:` and `mailto:` links open; any other link shows the message "This link type cannot be opened." Links to local files are not supported.
+To change a link, put the cursor inside it with the arrow keys, click **🔗** and type the new address. To remove it, click **🔗✕**, or empty the address field and press **Enter**.
+
+Clicking a link, also while you edit, asks first: the dialog **Open External Link** shows the address, and **Open Link** opens it in your default browser. Tick "Don't ask again and remember my choice" to open links at once on this device. A link of another type shows "This link type cannot be opened." If no browser is available, MyNote copies the address to the clipboard and says so.
+
+---
+
+## Finance
+
+The optional finance module adds ledger and statistics blocks to the `/` menu. See [Finance: ledgers and statistics](finance.md).
