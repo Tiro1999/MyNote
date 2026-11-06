@@ -1,5 +1,3 @@
-import type { ColumnConfig } from './ledger/columns'
-
 export const LOCALE = 'de-DE'
 export const DEFAULT_CURRENCY = '€'
 // Type words of a Money Manager export; data values, not UI text
@@ -37,6 +35,21 @@ export interface Entry {
 
 // An entry before the store gives it an id and a pos
 export type EntryDraft = Omit<Entry, 'id' | 'pos'>
+
+export type Align = 'left' | 'center' | 'right'
+
+export interface NumberFormat {
+  decimals: number
+  thousands: boolean
+  currencySymbol: string // '' = none
+  symbolPosition: 'before' | 'after'
+}
+
+export interface ColumnConfig {
+  align?: Align
+  width?: number // px; absent = auto/default
+  number?: NumberFormat
+}
 
 export interface LedgerMeta {
   name: string

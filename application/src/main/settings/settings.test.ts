@@ -50,6 +50,12 @@ describe('readSettings', () => {
     expect(log.warn).toHaveBeenCalledOnce()
   })
 
+  it('gives the defaults when the file holds an array', async () => {
+    await writeFile(join(userData, 'settings.json'), '[{"autoUpdateEnabled": false}]')
+    expect(readSettings()).toEqual({ autoUpdateEnabled: true })
+    expect(log.warn).not.toHaveBeenCalled()
+  })
+
   it('reads back what writeSettings wrote', async () => {
     await writeSettings({ autoUpdateEnabled: false })
     expect(readSettings()).toEqual({ autoUpdateEnabled: false })

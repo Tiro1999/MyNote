@@ -97,7 +97,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps): React.JSX.Elem
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Automatic updates</p>
             <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
               Check GitHub for new versions on startup and install them automatically. When off,
-              MyNote never contacts GitHub — update manually from the Releases page.
+              MyNote does not check for updates on its own — update manually from the Releases page.
             </p>
           </div>
           <button

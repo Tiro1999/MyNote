@@ -17,7 +17,7 @@ Code paths without a prefix are relative to `application/src/renderer/src`.
 | `ensureAccounts`, `ensureCategories`, `saveAccounts`, `saveCategories` | `referenceError` set, invalid data, failed write |
 | `listLedgers` | the listing of the `ledgers/` folder fails; an unreadable meta falls back to the id as name |
 
-Event handlers wrap a call in `reportFailure(promise)`, which turns a rejection into an error toast, so none stays unhandled.
+Event handlers wrap a call in `notifyFailure(promise)`, which turns a rejection into an error toast, so none stays unhandled.
 
 ## Write path
 

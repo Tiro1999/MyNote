@@ -132,12 +132,13 @@ jobs:
           OSV_COUNT: ${{ steps.osv.outputs.count }}
           TRIVY_COUNT: ${{ steps.trivy.outputs.count }}
           NPM_AUDIT_COUNT: ${{ steps.npm-audit.outputs.count }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           TOTAL=$((GRYPE_COUNT + OSV_COUNT + TRIVY_COUNT + NPM_AUDIT_COUNT))
           echo "count=$TOTAL" >> "$GITHUB_OUTPUT"
 
           {
-            echo "## Nightly SBOM scan — ${{ steps.tag.outputs.tag }}"
+            echo "## Nightly SBOM scan — $TAG"
             echo ""
             echo "| Scanner | Data source | Findings |"
             echo "|---------|-------------|----------|"
@@ -304,6 +305,8 @@ jobs:
 
       - name: Fail run when vulnerabilities were found
         if: steps.tag.outputs.found == 'true' && steps.scan.outputs.count != '0'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          echo "::error::${{ steps.scan.outputs.count }} vulnerability finding(s) in the ${{ steps.tag.outputs.tag }} SBOM (Grype/OSV-Scanner/Trivy/npm audit) — see the job summary and the 'sbom-scan' issue."
+          echo "::error::${{ steps.scan.outputs.count }} vulnerability finding(s) in the $TAG SBOM (Grype/OSV-Scanner/Trivy/npm audit) — see the job summary and the 'sbom-scan' issue."
           exit 1

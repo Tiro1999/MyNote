@@ -11,10 +11,9 @@ import {
   writeJson,
   writeText
 } from '@renderer/storage'
-import type { ColumnConfig } from './ledger/columns'
 import { loadLedgerCsv, serializeLedgerCsv } from './ledgerCsv'
 import { DEFAULT_CURRENCY, cleanCategoryPath, splitCategoryPath } from './model'
-import type { Account, CategoryNode, Entry, EntryDraft, LedgerMeta } from './model'
+import type { Account, CategoryNode, ColumnConfig, Entry, EntryDraft, LedgerMeta } from './model'
 import {
   ACCOUNTS_PATH,
   CATEGORIES_PATH,
@@ -166,6 +165,7 @@ async function readLedgerName(id: string): Promise<{ id: string; name: string }>
   }
 }
 
+// See documentation/software/renderer/finance/persistence.md
 export const useFinanceStore = create<FinanceState>((set, get) => {
   const putLedger = (id: string, ledger: LedgerState): void =>
     set((state) => ({ ledgers: { ...state.ledgers, [id]: ledger } }))

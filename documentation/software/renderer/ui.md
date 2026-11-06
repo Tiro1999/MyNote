@@ -12,11 +12,11 @@ This page describes the shared `ui` module: its public pieces and the rules for 
 | `ConfirmDialog` | `Modal` with a message and Cancel / confirm buttons; `danger` colours the confirm button, `busy` locks the dialog |
 | `TextInputDialog` | `Modal` with one trimmed text input; confirm stays off while the text is empty or `onConfirm` runs |
 | `buttonClass` | the looks `primary`, `secondary`, `danger`, `ghost` |
-| `openContextMenu`, `closeContextMenu`, `ContextMenuHost`, `clampToViewport` | one context menu at a time |
+| `openContextMenu`, `ContextMenuHost` | one context menu at a time |
 | `notify`, `Toaster` | short messages at the bottom of the window |
 | `usePointerDrag` | drag with pointer capture |
 
-Not exported: `pushEscapeHandler` (`escapeStack.ts`, used by `Modal`), `startPointerDrag` (behind the hook), `dismissToast` and the two stores (`useContextMenuStore`, `useToastStore`). The Escape stack is a plain array in `escapeStack.ts`. `App` mounts `ContextMenuHost` and `Toaster` once.
+Not exported: `closeContextMenu` and `clampToViewport` (inside `ContextMenu.tsx`), `pushEscapeHandler` (`escapeStack.ts`, used by `Modal`), `startPointerDrag` (behind the hook), `dismissToast` and the two stores (`useContextMenuStore`, `useToastStore`). The Escape stack is a plain array in `escapeStack.ts`. `App` mounts `ContextMenuHost` and `Toaster` once.
 
 ## Dialogs and Escape
 
@@ -29,7 +29,7 @@ Not exported: `pushEscapeHandler` (`escapeStack.ts`, used by `Modal`), `startPoi
 
 ## Context menu
 
-- Opened at a point with a list of `{ label, onSelect, danger?, disabled? }`; moved into the window with an 8 px margin (`clampToViewport`).
+- Opened at a point with a list of `{ label, onSelect, danger? }`; moved into the window with an 8 px margin (`clampToViewport`).
 - It closes on a `pointerdown` outside, on Escape, on any scroll and when the window loses focus. The listeners run in the capture phase, so a handler that stops an event cannot keep the menu open. The Escape listener is independent of the dialog stack.
 - A `mousedown` on the menu is prevented, so the focus stays where it was (an editor keeps its selection for the command). The menu closes before `onSelect` runs.
 - Used by the sidebar and by the table block.

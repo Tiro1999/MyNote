@@ -3,7 +3,7 @@ import type { AnyExtension } from '@tiptap/core'
 import { useNotebookStore } from '@renderer/notebook'
 import { JUMP_LINK_CLASS, UNTITLED_LABEL } from './linkList'
 
-// Load-only: v0.1.x pages contain it; with the node missing a page would load empty and the next save would erase it
+// Load-only: v0.1.x pages contain it; with the node missing the text box turns read-only (its stored content is kept)
 const TemplateLink = Node.create({
   name: 'templateLink',
   group: 'inline',

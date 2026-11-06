@@ -70,6 +70,7 @@ export function flushContent(): Promise<void> {
   return snapshot ? save(snapshot) : Promise.resolve()
 }
 
+// See documentation/software/renderer/notebook/content-lifecycle.drawio.svg
 export const useContentStore = create<ContentState>((set, get) => {
   // No content (still loading, or failed to load) or an edit that matched nothing leaves state and file alone
   const change = (edit: (elements: CanvasElement[]) => CanvasElement[] | null): Snapshot | null => {

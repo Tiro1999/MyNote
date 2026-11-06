@@ -24,6 +24,7 @@ function stopPropagation(e: React.SyntheticEvent): void {
   e.stopPropagation()
 }
 
+// See documentation/software/renderer/ui.md
 export function Modal({
   title,
   onClose,
@@ -57,7 +58,7 @@ export function Modal({
       }}
       onMouseDown={(e) => {
         e.stopPropagation()
-        // A press on the backdrop keeps the focus in the modal, so Tab stays in it
+        // A press on the backdrop keeps the focus where it was; the modal does not trap Tab or restore focus
         if (e.target === e.currentTarget) e.preventDefault()
       }}
       onClick={(e) => {

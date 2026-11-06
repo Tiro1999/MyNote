@@ -36,7 +36,7 @@ Everything from the renderer is untrusted and is checked in main before use. A w
 ## Paths
 
 - A path crosses IPC folder-relative and `/`-separated (`notebooks.json`, `<notebook>/<chapter>/page.json`, `finance/…`), whatever the platform. The renderer builds it with `joinPath` from `@renderer/storage`; an id that becomes a segment must match `isValidId`.
-- Main resolves it against the data root with `resolveInRoot` and rejects an empty segment, `.`, `..` and a segment with `\`, `:` or a NUL character: `Path outside the notebook folder: <path>`. The rules and their limits are on [files](files.md).
+- Main resolves it against the data root with `resolveInRoot` and rejects an empty segment, `.`, `..` and a segment with `\`, `:` or a NUL character or one that ends with a space or a dot: `Path outside the notebook folder: <path>`. The rules and their limits are on [files](files.md).
 - No path from outside the data root is sent to main. Reading or writing such a file is an intent that main does itself, with a dialog in the same call: `files.importText`, `files.exportText`, `xlsx.importSheet`. The two dialogs `dialogs.openNotebookFolder` and `dialogs.pickFile` return a chosen path from main to the renderer; the renderer only shows or stores it as text and never sends it back as a path to read.
 
 ## Errors

@@ -1,8 +1,7 @@
-import type { Account, EntryDraft } from '../model'
+import type { Account, Align, ColumnConfig, EntryDraft } from '../model'
 import { parseTags } from '../model'
 import CommitInput, { positiveAmount, tagList } from './CommitInput'
 import { alignClass, applyColumnFormat } from './columns'
-import type { Align, ColumnConfig } from './columns'
 
 export const CELL_CLASS = 'px-2 py-0.5 align-middle whitespace-nowrap'
 const FIELD_CLASS = 'bg-transparent field-sizing-content min-w-14 max-w-[24rem]'

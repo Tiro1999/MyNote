@@ -1,7 +1,6 @@
 import { describeValue, fieldsOf, textOf } from '@renderer/storage'
 import { clampDecimals } from './ledger/columns'
-import type { Align, ColumnConfig, NumberFormat } from './ledger/columns'
-import type { Account, CategoryNode, LedgerMeta } from './model'
+import type { Account, Align, CategoryNode, ColumnConfig, LedgerMeta, NumberFormat } from './model'
 
 export const MAX_CATEGORY_DEPTH = 32
 const ALIGNMENTS: readonly Align[] = ['left', 'center', 'right']

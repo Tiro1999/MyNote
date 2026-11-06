@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import ErrorBox from '../ErrorBox'
-import { reportFailure } from '../reportFailure'
+import { notifyFailure } from '../notifyFailure'
 import { ledgerOf, useFinanceStore } from '../store'
 import BalanceFooter from './BalanceFooter'
 import LedgerTable from './LedgerTable'
@@ -20,8 +20,8 @@ export default function LedgerBlock({ node, deleteNode }: NodeViewProps): React.
 
   useEffect(() => {
     const { loadReferenceData, loadLedger } = useFinanceStore.getState()
-    reportFailure(loadReferenceData())
-    reportFailure(loadLedger(ledgerId))
+    notifyFailure(loadReferenceData())
+    notifyFailure(loadLedger(ledgerId))
   }, [ledgerId])
 
   const title = ledger?.meta.name || 'Ledger'

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Account, EntryDraft } from '../model'
 import CommitInput from './CommitInput'
 import EntryCells from './EntryCells'
-import type { ColumnConfig } from './columns'
+import type { ColumnConfig } from '../model'
 
 type Props = Parameters<typeof EntryCells>[0]
 

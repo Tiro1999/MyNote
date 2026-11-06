@@ -2,7 +2,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import { Children, isValidElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Minimap from './Minimap'
-import { hooks } from './testHooks'
+import { hooks } from './hooks.testing'
 
 interface Drag {
   onMove(dx: number, dy: number): void
@@ -13,7 +13,7 @@ interface Drag {
 const { drags } = vi.hoisted(() => ({ drags: [] as Drag[] }))
 
 vi.mock('react', async (importOriginal) => {
-  const { hooks: shim } = await import('./testHooks')
+  const { hooks: shim } = await import('./hooks.testing')
   return {
     ...(await importOriginal<typeof import('react')>()),
     useRef: (value: unknown) => shim.useRef(value),

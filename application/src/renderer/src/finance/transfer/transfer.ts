@@ -7,6 +7,7 @@ import type { LedgerState } from '../store'
 import { exportFileName } from './exportFileName'
 import { mapMoneyManager } from './moneyManager'
 
+// See documentation/software/renderer/finance/import-export.drawio.svg
 export interface TransferResult {
   imported: number
   skipped: number

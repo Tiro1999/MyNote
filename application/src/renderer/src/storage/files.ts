@@ -20,12 +20,9 @@ export function joinPath(...segments: string[]): string {
 }
 
 export class CorruptFileError extends Error {
-  readonly path: string
-
   constructor(path: string, cause: unknown) {
     super(`${path}: ${messageOf(cause)}`, { cause })
     this.name = 'CorruptFileError'
-    this.path = path
   }
 }
 
@@ -73,7 +70,7 @@ function sendPending(path: string): void {
   if (pending) send(path, pending)
 }
 
-// async turns a synchronous throw of the bridge into a rejection, so the queue keeps moving
+// async turns a synchronous throw of the Preload API (`window.api`) into a rejection, so the queue keeps moving
 async function writeToMain(path: string, text: string): Promise<void> {
   await window.api.files.writeText(path, text)
 }

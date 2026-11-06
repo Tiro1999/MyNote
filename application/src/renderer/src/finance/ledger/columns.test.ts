@@ -12,10 +12,9 @@ import {
   resizedColumnWidth,
   resolveColumn,
   resolveColumns,
-  startWidthDrag,
-  type ColumnConfig,
-  type NumberFormat
+  startWidthDrag
 } from './columns'
+import type { ColumnConfig, NumberFormat } from '../model'
 
 const plain: NumberFormat = {
   decimals: 2,

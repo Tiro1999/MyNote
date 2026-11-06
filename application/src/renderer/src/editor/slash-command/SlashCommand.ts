@@ -11,7 +11,7 @@ export interface SlashCommandOptions {
   items: SlashItem[]
 }
 
-// The `/` menu: Suggestion mounts a React menu at the caret and positions it with Floating UI
+// The `/` menu: Suggestion mounts a React menu at the caret and positions it with Floating UI. See documentation/software/renderer/editor/slash-command.drawio.svg
 export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
 

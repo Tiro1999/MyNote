@@ -3,7 +3,7 @@ import { replaceRangeWith, type EditorFeature } from '@renderer/editor'
 import { newId } from '@renderer/storage'
 import LedgerBlock from './ledger/LedgerBlock'
 import { FinanceLedgerNode, FinanceStatsNode } from './nodes'
-import { reportFailure } from './reportFailure'
+import { notifyFailure } from './notifyFailure'
 import StatisticsBlock from './statistics/StatisticsBlock'
 import { useFinanceStore } from './store'
 
@@ -23,7 +23,7 @@ export const financeFeature: EditorFeature = {
       run: (editor, range) => {
         const ledgerId = newId()
         replaceRangeWith(editor, range, { type: 'financeLedger', attrs: { ledgerId } })
-        reportFailure(useFinanceStore.getState().createLedger(ledgerId, 'New ledger'))
+        notifyFailure(useFinanceStore.getState().createLedger(ledgerId, 'New ledger'))
       }
     },
     {

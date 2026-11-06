@@ -1,7 +1,8 @@
 import path from 'path'
 
+// Windows drops a trailing space or dot, so '.. ' would name the parent folder
 function isSafeSegment(segment: string): boolean {
-  return segment !== '' && segment !== '.' && segment !== '..' && !/[\\:\0]/.test(segment)
+  return segment !== '' && segment !== '.' && segment !== '..' && !/[\\:\0]|[ .]$/.test(segment)
 }
 
 export function resolveInRoot(root: string, relPath: string, p: typeof path = path): string {

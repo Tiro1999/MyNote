@@ -52,27 +52,18 @@ export function computeTotals(entries: Entry[]): Totals {
 export interface AccountBalance {
   accountId: string
   name: string
-  openingCents: number
-  flowCents: number
   balanceCents: number
 }
 
 export function computeAccountBalances(entries: Entry[], accounts: Account[]): AccountBalance[] {
   return accounts.map((acc) => {
-    const opening = parseMoneyToCents(acc.openingBalance)
-    let flow = 0
+    let balanceCents = parseMoneyToCents(acc.openingBalance)
     for (const e of entries) {
       if (e.accountId !== acc.id) continue
       const cents = parseMoneyToCents(e.amount)
-      flow += e.type === 'income' ? cents : -cents
+      balanceCents += e.type === 'income' ? cents : -cents
     }
-    return {
-      accountId: acc.id,
-      name: acc.name,
-      openingCents: opening,
-      flowCents: flow,
-      balanceCents: opening + flow
-    }
+    return { accountId: acc.id, name: acc.name, balanceCents }
   })
 }
 

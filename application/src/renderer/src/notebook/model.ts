@@ -1,3 +1,4 @@
+// See documentation/software/renderer/notebook/data-model.drawio.svg
 export interface Notebook {
   id: string
   name: string

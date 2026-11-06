@@ -52,6 +52,7 @@ export function cellCoordinates(doc: ProseMirrorNode, pos: number): CellCoordina
 // See documentation/software/renderer/editor/table.md
 export function resolveCommand(command: TableCommand, table: ProseMirrorNode): TableCommand {
   const { width, height } = TableMap.get(table)
+  // CHECK: a cell that spans every row makes deleteRow do nothing; only height <= 1 is checked
   const isLast = (command === 'deleteRow' && height <= 1) || (command === 'deleteColumn' && width <= 1)
   return isLast ? 'deleteTable' : command
 }

@@ -150,7 +150,6 @@ describe('readJson', () => {
     const error = await rejectionOf(readJson('nb1/s1/page.json', (raw) => raw))
     expect(error).toBeInstanceOf(CorruptFileError)
     const corrupt = error as CorruptFileError
-    expect(corrupt.path).toBe('nb1/s1/page.json')
     expect(corrupt.cause).toBeInstanceOf(SyntaxError)
     expect(corrupt.message).toBe(`nb1/s1/page.json: ${(corrupt.cause as SyntaxError).message}`)
   })
@@ -165,7 +164,6 @@ describe('readJson', () => {
     )
     expect(error).toBeInstanceOf(CorruptFileError)
     const corrupt = error as CorruptFileError
-    expect(corrupt.path).toBe('notebooks.json')
     expect(corrupt.cause).toBe(reason)
     expect(corrupt.message).toBe('notebooks.json: Notebook "nb1": sections must be an array')
   })

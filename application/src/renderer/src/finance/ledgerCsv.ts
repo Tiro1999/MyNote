@@ -2,6 +2,7 @@ import { parseCsv, serializeCsv } from './csv'
 import { cleanCategoryPath, normalizeAmount, parseTags } from './model'
 import type { Entry, EntryType } from './model'
 
+// See documentation/software/renderer/finance/data-files.md
 export const LEDGER_HEADER = [
   'id',
   'pos',

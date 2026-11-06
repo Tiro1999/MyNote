@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { IPC, type AppSettings } from '@shared/ipc'
 import { createLogger } from '@shared/log'
+import { isRecord } from '@shared/records'
 import { writeFileAtomic } from '../files/atomicWrite'
 import { handle } from '../ipc'
 
@@ -12,10 +13,6 @@ const log = createLogger('settings')
 // Electron's userData folder, not the notebook folder
 function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 export function parseSettings(raw: unknown): AppSettings {

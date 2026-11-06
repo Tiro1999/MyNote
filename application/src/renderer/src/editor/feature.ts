@@ -9,6 +9,7 @@ export interface SlashItem {
   run(editor: Editor, range: Range): void
 }
 
+// See documentation/software/renderer/editor/feature-registry.md
 export interface EditorFeature {
   name: string
   extensions: AnyExtension[]

@@ -1,8 +1,8 @@
 import { Modal, buttonClass } from '@renderer/ui'
+import type { Align, ColumnConfig, NumberFormat } from '../model'
 import CommitInput from './CommitInput'
 import type { Validate } from './CommitInput'
 import { MAX_EDIT_DECIMALS, parseDecimals } from './columns'
-import type { Align, ColumnConfig, NumberFormat } from './columns'
 
 interface Props {
   title: string

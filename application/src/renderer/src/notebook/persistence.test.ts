@@ -2,7 +2,7 @@ import { readFileSync } from 'fs'
 import { describe, expect, it } from 'vitest'
 import { messageOf } from '@shared/errors'
 import { parseNotebooks } from './persistence'
-import { NOW } from './testFixtures'
+import { NOW } from './fixtures.testing'
 
 const SCHEMA = new URL('../../../../../documentation/software/file-format/notebooks.schema.json', import.meta.url)
 const BACKFILLED = ['sections', 'pages', 'children']

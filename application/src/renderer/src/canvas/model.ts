@@ -1,4 +1,4 @@
-import { describeValue, isRecord, newId } from '@renderer/storage'
+import { describeValue, fieldsOf, isRecord, newId } from '@renderer/storage'
 import type { Point, Size } from './geometry'
 
 export interface TextBoxElement {
@@ -40,12 +40,6 @@ function numberOf(fields: Fields, key: string, where: string): number {
   throw new Error(`${where}: ${key} must be a number, got ${shown}`)
 }
 
-function fieldsOf(fields: Fields, key: string, where: string): Fields {
-  const value = fields[key]
-  if (isRecord(value)) return value
-  throw new Error(`${where}: ${key} must be an object, got ${describeValue(value)}`)
-}
-
 function parseTextBox(fields: Fields, id: string): TextBoxElement {
   const where = `Text box "${id}"`
   return {
@@ -57,7 +51,7 @@ function parseTextBox(fields: Fields, id: string): TextBoxElement {
     width: numberOf(fields, 'width', where),
     height: numberOf(fields, 'height', where),
     zIndex: numberOf(fields, 'zIndex', where),
-    content: fieldsOf(fields, 'content', where)
+    content: fieldsOf(fields.content, `${where}: content`)
   }
 }
 

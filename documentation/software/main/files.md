@@ -17,7 +17,7 @@ The folder dialog is the only way to set the data root. Every `files:*` call is 
 
 [`application/src/main/files/scope.ts`](../../../application/src/main/files/scope.ts) (`resolveInRoot`) turns the relative path into an absolute one:
 
-- The path is split on `/`. Every segment must be non-empty, not `.` or `..`, and free of `\`, `:` and NUL; otherwise `Path outside the notebook folder: <path>`.
+- The path is split on `/`. Every segment must be non-empty, not `.` or `..`, and free of `\`, `:` and NUL, and does not end with a space or a dot (Windows drops them, so `.. ` would name the parent); otherwise `Path outside the notebook folder: <path>`.
 - So the folder itself (`''`) cannot be read, listed or removed. The segments are joined with the platform `path.join`, so Windows folders such as `D:\Sync\OneDrive\Notes` work.
 - The check is lexical. A symlink inside the notebook folder is followed, and Windows reserved names (`CON`, `NUL`, …) are not rejected.
 

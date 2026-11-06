@@ -1,19 +1,5 @@
 import { LOCALE } from '../model'
-
-export type Align = 'left' | 'center' | 'right'
-
-export interface NumberFormat {
-  decimals: number
-  thousands: boolean
-  currencySymbol: string // '' = none
-  symbolPosition: 'before' | 'after'
-}
-
-export interface ColumnConfig {
-  align?: Align
-  width?: number // px; absent = auto/default
-  number?: NumberFormat
-}
+import type { Align, ColumnConfig, NumberFormat } from '../model'
 
 // Configurable columns (the '#', link and delete columns stay structural)
 export const LEDGER_COLUMNS: readonly { id: string; label: string }[] = [

@@ -49,7 +49,7 @@ describe('computeAccountBalances', () => {
       [mk({ accountId: 'a', type: 'income', amount: '250' }), mk({ accountId: 'a', type: 'expense', amount: '50' })],
       accounts
     )
-    expect(r[0]).toMatchObject({ accountId: 'a', name: 'Giro', openingCents: -10000, flowCents: 20000, balanceCents: 10000 })
+    expect(r[0]).toMatchObject({ accountId: 'a', name: 'Giro', balanceCents: 10000 })
   })
 
   it('ignores the entries of other accounts and gives an account without entries its opening balance', () => {

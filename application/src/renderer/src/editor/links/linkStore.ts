@@ -34,7 +34,7 @@ interface LinkStore {
   cancel: () => void
 }
 
-// A plain store, not React state: the link guard calls it from a ProseMirror handler
+// A plain store, not React state: the link guard calls it from a ProseMirror handler. See documentation/software/renderer/editor/links.drawio.svg
 export const useLinkStore = create<LinkStore>((set, get) => ({
   pendingUrl: null,
   trustExternalLinks: readTrust(),

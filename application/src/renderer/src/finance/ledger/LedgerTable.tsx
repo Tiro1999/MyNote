@@ -1,15 +1,15 @@
 import { memo, useMemo, useRef, useState } from 'react'
 import { messageOf } from '@shared/errors'
 import { notify, usePointerDrag } from '@renderer/ui'
-import type { Account, CategoryNode, Entry, EntryDraft } from '../model'
+import type { Account, CategoryNode, ColumnConfig, Entry, EntryDraft } from '../model'
 import { flattenCategories } from '../model'
-import { reportFailure } from '../reportFailure'
+import { notifyFailure } from '../notifyFailure'
 import { ledgerOf, useFinanceStore } from '../store'
 import type { LedgerState } from '../store'
 import ColumnConfigPopover from './ColumnConfigPopover'
 import EntryCells, { CELL_CLASS } from './EntryCells'
 import { LEDGER_COLUMNS, alignClass, resolveColumns, startWidthDrag } from './columns'
-import type { ColumnConfig, WidthDrag } from './columns'
+import type { WidthDrag } from './columns'
 import { addDraft, emptyDraft } from './draft'
 import { pageWindow, pagerLabel } from './pager'
 import type { PageWindow } from './pager'
@@ -37,7 +37,7 @@ interface Shared {
 function saveColumn(ledgerId: string, id: string, change: (stored: ColumnConfig) => ColumnConfig): void {
   const { ledgers, saveLedgerColumns } = useFinanceStore.getState()
   const stored = ledgerOf(ledgers, ledgerId)?.meta.columns ?? NO_COLUMNS
-  reportFailure(saveLedgerColumns(ledgerId, { ...stored, [id]: change(stored[id] ?? {}) }))
+  notifyFailure(saveLedgerColumns(ledgerId, { ...stored, [id]: change(stored[id] ?? {}) }))
 }
 
 interface HeaderProps {
@@ -142,7 +142,7 @@ const EntryRow = memo(function EntryRow({
   entry,
   ...shared
 }: Shared & { ledgerId: string; entry: Entry }): React.JSX.Element {
-  const update = (next: Entry): void => reportFailure(useFinanceStore.getState().updateEntry(ledgerId, next))
+  const update = (next: Entry): void => notifyFailure(useFinanceStore.getState().updateEntry(ledgerId, next))
 
   const linkReceipt = async (): Promise<void> => {
     try {
@@ -167,7 +167,7 @@ const EntryRow = memo(function EntryRow({
           type="button"
           className="text-red-600"
           aria-label="Delete entry"
-          onClick={() => reportFailure(useFinanceStore.getState().deleteEntry(ledgerId, entry.id))}
+          onClick={() => notifyFailure(useFinanceStore.getState().deleteEntry(ledgerId, entry.id))}
         >
           ✕
         </button>

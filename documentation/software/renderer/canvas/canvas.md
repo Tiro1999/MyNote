@@ -19,7 +19,7 @@ All in [`application/src/renderer/src/canvas`](../../../../application/src/rende
 | `geometry.ts` | pure coordinate maths without React |
 | `model.ts` | element types, `parsePageContent`, `newTextBox` |
 | `contentStore.ts` | `useContentStore`: open content, load, save ([content lifecycle](../notebook/content-lifecycle.drawio.svg)) |
-| `testHooks.ts` | test stand-in for React's `useRef` and `useState`, so tests can call `TextBox` and `Minimap` as plain functions |
+| `hooks.testing.ts` | test stand-in for React's `useRef` and `useState`, so tests can call `TextBox` and `Minimap` as plain functions |
 
 ## Drag starts after 3 px
 

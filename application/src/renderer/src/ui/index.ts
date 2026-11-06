@@ -1,5 +1,5 @@
 export { buttonClass } from './buttons'
-export { ContextMenuHost, clampToViewport, closeContextMenu, openContextMenu } from './ContextMenu'
+export { ContextMenuHost, openContextMenu } from './ContextMenu'
 export type { ContextMenuItem } from './ContextMenu'
 export { ConfirmDialog, Modal, TextInputDialog } from './Modal'
 export { Toaster, notify } from './Toast'

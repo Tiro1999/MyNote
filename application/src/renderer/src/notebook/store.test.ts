@@ -3,7 +3,7 @@ import { flushWrites } from '@renderer/storage'
 import { notify } from '@renderer/ui'
 import type { ContentRef, Notebook } from './model'
 import { useNotebookStore } from './store'
-import { page, pageIds } from './testFixtures'
+import { page, pageIds } from './fixtures.testing'
 
 vi.mock('@renderer/ui', () => ({ notify: vi.fn() }))
 

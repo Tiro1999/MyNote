@@ -3,7 +3,7 @@ import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import ErrorBox from '../ErrorBox'
 import { formatCents, splitCategoryPath, todayISO } from '../model'
 import type { Account, Entry } from '../model'
-import { reportFailure } from '../reportFailure'
+import { notifyFailure } from '../notifyFailure'
 import { ledgerOf, useFinanceStore } from '../store'
 import { Bars, Line, Pie } from './charts'
 import { loadLedgerChoices, type LedgerChoices } from './ledgerChoices'
@@ -148,7 +148,7 @@ export default function StatisticsBlock({ node, updateAttributes }: NodeViewProp
 
   useEffect(() => {
     const { loadReferenceData, listLedgers } = useFinanceStore.getState()
-    reportFailure(loadReferenceData())
+    notifyFailure(loadReferenceData())
     let active = true
     void loadLedgerChoices(listLedgers).then((result) => {
       if (active) setChoices(result)
@@ -159,7 +159,7 @@ export default function StatisticsBlock({ node, updateAttributes }: NodeViewProp
   }, [])
 
   useEffect(() => {
-    if (ledgerId !== '') reportFailure(useFinanceStore.getState().loadLedger(ledgerId))
+    if (ledgerId !== '') notifyFailure(useFinanceStore.getState().loadLedger(ledgerId))
   }, [ledgerId])
 
   const range = useMemo(

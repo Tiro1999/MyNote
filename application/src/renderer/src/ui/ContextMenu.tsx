@@ -6,7 +6,6 @@ export interface ContextMenuItem {
   label: string
   onSelect(): void
   danger?: boolean
-  disabled?: boolean
 }
 
 interface OpenMenu {
@@ -89,8 +88,7 @@ function Menu({ menu }: { menu: OpenMenu }): React.JSX.Element {
         <button
           key={index}
           type="button"
-          disabled={item.disabled}
-          className={`block w-full px-3 py-1.5 text-left text-sm enabled:hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:enabled:hover:bg-gray-800 ${
+          className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 ${
             item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-200'
           }`}
           onClick={() => {

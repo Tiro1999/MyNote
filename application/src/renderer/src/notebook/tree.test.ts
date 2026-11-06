@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isValidId } from '@renderer/storage'
 import type { Notebook } from './model'
-import { NOW, page, pageIds } from './testFixtures'
+import { NOW, page, pageIds } from './fixtures.testing'
 import {
   addPage,
   addSubpage,

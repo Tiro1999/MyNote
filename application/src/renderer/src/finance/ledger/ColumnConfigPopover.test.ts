@@ -1,7 +1,7 @@
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { renderToString } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ColumnConfig } from './columns'
+import type { ColumnConfig } from '../model'
 
 interface ModalProps {
   title: string

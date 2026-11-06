@@ -32,7 +32,7 @@ export function noteEditorOptions(
   }
 }
 
-// The editor is created once: pass a module constant as `features`, a different array does not rebuild it
+// The editor is created once: a new `features` array only updates its options (setOptions), the schema stays
 export function useNoteEditor({ content, features, ...callbacks }: NoteEditorOptions): Editor | null {
   const extensions = useMemo(() => buildExtensions(features), [features])
   const [initialContent] = useState(content)

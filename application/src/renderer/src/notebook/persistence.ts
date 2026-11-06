@@ -9,6 +9,7 @@ import {
 } from '@renderer/storage'
 import type { Notebook, PageMeta, Section } from './model'
 
+// See documentation/software/file-format/file-format.md
 export const MANIFEST_PATH = 'notebooks.json'
 
 // The finance data has this top-level folder, so no notebook may take it, in any case
