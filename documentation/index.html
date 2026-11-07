@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyNote documentation</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1f2328; --muted: #5b636b;
+    --line: #d8dbde; --link: #1a5fb4; --head: #eceff1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181a; --card: #1f2326; --text: #e6e8ea; --muted: #9aa3ab;
+      --line: #3a4044; --link: #7db3f5; --head: #272c30;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  h2 { font-size: 1.2rem; margin: 32px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  p { margin: 8px 0; }
+  .lead { color: var(--muted); margin-top: 0; }
+  a { color: var(--link); }
+  code { font: 0.9em ui-monospace, Consolas, monospace; background: var(--head); padding: 1px 5px; border-radius: 4px; }
+  .figure { background: #ffffff; border: 1px solid var(--line); border-radius: 8px; padding: 8px; overflow-x: auto; }
+  .figure img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { background: var(--head); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td:first-child { white-space: nowrap; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin: 3px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .card h3 { margin: 0 0 6px; font-size: 1rem; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 0.85rem; }
+  @media (max-width: 600px) { td:first-child { white-space: normal; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>MyNote documentation</h1>
+  <p class="lead">A local-first desktop notebook: free-form canvas pages with rich text, slash-command blocks and an optional finance ledger, stored as plain files. Version 0.2.0.</p>
+
+  <h2>Architecture</h2>
+  <div class="figure"><img src="software/architecture.drawio.svg" alt="Main, preload and renderer processes with the renderer modules as layers"></div>
+  <p>Three processes and one shared folder. Details, the allowed imports, the feature flag and the logging levels: <a href="software/architecture.md">architecture</a>.</p>
+
+  <h2>Module map</h2>
+  <table>
+    <thead><tr><th>Module</th><th>What it holds</th><th>Read</th></tr></thead>
+    <tbody>
+      <tr><td><code>main</code></td><td>Data root and file access, atomic write, settings, update check, window guards, <code>.xlsx</code> reader</td><td><a href="software/main/ipc.md">IPC</a> · <a href="software/main/files.md">files</a> · <a href="software/main/data-root.drawio.svg">data root</a> · <a href="software/main/updates.md">updates</a> · <a href="software/main/finance-xlsx.md">.xlsx reader</a></td></tr>
+      <tr><td><code>shared</code></td><td>IPC contract, errors, link rules, logger, feature flag</td><td><a href="software/architecture.md">architecture</a></td></tr>
+      <tr><td><code>ui</code></td><td>Dialogs, context menu, toasts, escape stack</td><td><a href="software/renderer/ui.md">ui</a></td></tr>
+      <tr><td><code>storage</code></td><td>Folder-relative file access, write queue, ids, value checks</td><td><a href="software/file-format/file-format.md">file format</a> · <a href="software/main/files.md">files</a></td></tr>
+      <tr><td><code>settings</code></td><td>Theme, settings dialog</td><td><a href="software/main/updates.md">updates</a></td></tr>
+      <tr><td><code>notebook</code></td><td>Notebook tree, store, manifest, sidebar</td><td><a href="software/renderer/notebook/notebook.md">notebook</a> · <a href="software/renderer/notebook/data-model.drawio.svg">data model</a> · <a href="software/renderer/notebook/content-lifecycle.drawio.svg">content lifecycle</a></td></tr>
+      <tr><td><code>editor</code></td><td>TipTap setup, feature registry, blocks, slash command, links, toolbar</td><td><a href="software/renderer/editor/feature-registry.md">feature registry</a> · <a href="software/renderer/editor/live-blocks.md">live blocks</a> · <a href="software/renderer/editor/table.md">table</a> · <a href="software/renderer/editor/slash-command.drawio.svg">slash command</a> · <a href="software/renderer/editor/links.drawio.svg">links</a></td></tr>
+      <tr><td><code>canvas</code></td><td>Canvas view, text boxes, viewport, minimap, content store</td><td><a href="software/renderer/canvas/canvas.md">canvas</a> · <a href="software/renderer/canvas/coordinate-model.drawio.svg">coordinate model</a></td></tr>
+      <tr><td><code>finance</code></td><td>Ledger and statistics blocks, finance store, import and export (optional module)</td><td><a href="software/renderer/finance/data-files.md">data files</a> · <a href="software/renderer/finance/persistence.md">persistence</a> · <a href="software/renderer/finance/import-export.drawio.svg">import and export</a> · <a href="software/renderer/finance/statistics.drawio.svg">statistics</a></td></tr>
+      <tr><td><code>app</code></td><td>App shell, content area, error boundary, the list of editor features</td><td><a href="software/architecture.md">architecture</a></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Guides and reference</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Using MyNote</h3>
+      <ul>
+        <li><a href="user/getting-started.md">Getting started</a></li>
+        <li><a href="user/finance.md">Finance: ledgers and statistics</a></li>
+        <li><a href="user/network-storage.md">Network storage</a></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Files on disk</h3>
+      <ul>
+        <li><a href="software/file-format/file-format.md">File format</a></li>
+        <li><a href="software/file-format/notebook-folder.drawio.svg">Notebook folder</a></li>
+        <li><a href="software/file-format/notebooks.schema.json">notebooks schema</a></li>
+        <li><a href="software/file-format/page-content.schema.json">page content schema</a></li>
+        <li><a href="software/file-format/tiptap-document.schema.json">TipTap document schema</a></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Build and release</h3>
+      <ul>
+        <li><a href="software/build/build-and-release.md">Build and release</a></li>
+        <li><a href="software/build/release-flow.drawio.svg">Release flow</a></li>
+        <li><a href="software/build/sbom.md">SBOM</a></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Names and history</h3>
+      <ul>
+        <li><a href="glossar.md">Glossary</a>: binding names for code, comments and documentation</li>
+        <li><a href="../CHANGELOG.md">Changelog</a></li>
+        <li><a href="../README.md">README</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>Diagrams are <code>.drawio.svg</code> files: open them in draw.io (desktop or the VS Code extension) to edit. Markdown pages show best on GitHub or in an editor.</footer>
+</main>
+</body>
+</html>

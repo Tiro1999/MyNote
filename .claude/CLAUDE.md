@@ -3,14 +3,14 @@
 Fill in per project; values in `<angle brackets>` are unset. Every agent reads this file.
 The universal rules live in `.claude/rules/` and stay untouched.
 
-| Field           | Value                                                                         |
-| --------------- | ----------------------------------------------------------------------------- |
-| Purpose         | `<one sentence>`                                                              |
-| Type            | `<embedded · desktop · web · library>`                                        |
-| Language        | `<e.g. C, C++, Rust, Python>`                                                 |
-| SDK / Framework | `<name and version>`                                                          |
-| Target          | `<product hardware or OS, e.g. ESP32-S3, Windows x64>`                        |
-| Test hardware   | `<optional: what may be flashed, e.g. dev board #2 on /dev/ttyUSB0>`          |
-| Default tasks   | `<optional: Build → task label · Test → task label · Flash/Run → task label>` |
-| Environment     | `<optional: setup command, e.g. . $IDF_PATH/export.sh>`                       |
-| Version source  | `<e.g. git describe --tags>`                                                  |
+| Field           | Value |
+| --------------- | ----- |
+| Purpose         | Local-first desktop notebook: free-form canvas pages with rich text, slash-command blocks and an optional finance ledger, stored as plain files. |
+| Type            | desktop |
+| Language        | TypeScript |
+| SDK / Framework | Electron 42 · electron-vite 5 · React 18 · TipTap 3 · Zustand 4 · Tailwind CSS 4 · Vitest 4 |
+| Target          | Windows x64, macOS x64/arm64, Linux x64 (AppImage) |
+| Test hardware   | none; GUI runs are done by the owner |
+| Default tasks   | Build → `MyNote: Build` · Test → `MyNote: Test` · Run → `MyNote: Run Dev` |
+| Environment     | Devcontainer only, no Node on the host: `docker exec -u node CONTAINER bash -lc 'cd /workspaces/MyNote/application && COMMAND'`, where CONTAINER is the running container whose image starts with `vsc-mynote` |
+| Version source  | `git describe --tags` |

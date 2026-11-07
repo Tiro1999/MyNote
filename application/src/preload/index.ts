@@ -1,70 +1,39 @@
-import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { IPC, type MyNoteApi } from '@shared/ipc'
 
-const api = {
-  fs: {
-    readFile: (filePath: string): Promise<string> =>
-      ipcRenderer.invoke('fs:readFile', filePath),
-    writeFile: (filePath: string, content: string): Promise<void> =>
-      ipcRenderer.invoke('fs:writeFile', filePath, content),
-    readDir: (dirPath: string): Promise<Array<{ name: string; isDirectory: boolean }>> =>
-      ipcRenderer.invoke('fs:readDir', dirPath),
-    mkdir: (dirPath: string): Promise<void> =>
-      ipcRenderer.invoke('fs:mkdir', dirPath),
-    exists: (path: string): Promise<boolean> =>
-      ipcRenderer.invoke('fs:exists', path),
-    copyFile: (src: string, dest: string): Promise<void> =>
-      ipcRenderer.invoke('fs:copyFile', src, dest),
-    remove: (targetPath: string): Promise<void> =>
-      ipcRenderer.invoke('fs:remove', targetPath)
+const api: MyNoteApi = {
+  files: {
+    readText: (path) => ipcRenderer.invoke(IPC.files.readText, path),
+    writeText: (path, text) => ipcRenderer.invoke(IPC.files.writeText, path, text),
+    list: (dir) => ipcRenderer.invoke(IPC.files.list, dir),
+    remove: (path) => ipcRenderer.invoke(IPC.files.remove, path),
+    importText: (filters) => ipcRenderer.invoke(IPC.files.importText, filters),
+    exportText: (defaultName, filters, text) =>
+      ipcRenderer.invoke(IPC.files.exportText, defaultName, filters, text)
   },
-  dialog: {
-    openDirectory: (): Promise<string | null> =>
-      ipcRenderer.invoke('dialog:openDirectory'),
-    openFile: (
-      filters: Array<{ name: string; extensions: string[] }>
-    ): Promise<string | null> =>
-      ipcRenderer.invoke('dialog:openFile', filters),
-    saveFile: (options: {
-      defaultPath?: string
-      filters?: Array<{ name: string; extensions: string[] }>
-    }): Promise<string | null> => ipcRenderer.invoke('dialog:saveFile', options)
+  dialogs: {
+    openNotebookFolder: () => ipcRenderer.invoke(IPC.dialogs.openNotebookFolder),
+    pickFile: (filters) => ipcRenderer.invoke(IPC.dialogs.pickFile, filters)
   },
   xlsx: {
-    readSheet: (filePath: string): Promise<string[][]> =>
-      ipcRenderer.invoke('xlsx:readSheet', filePath)
+    importSheet: () => ipcRenderer.invoke(IPC.xlsx.importSheet)
   },
   settings: {
-    get: (): Promise<{ autoUpdateEnabled: boolean }> =>
-      ipcRenderer.invoke('settings:get'),
-    setAutoUpdate: (enabled: boolean): Promise<{ autoUpdateEnabled: boolean }> =>
-      ipcRenderer.invoke('settings:setAutoUpdate', enabled)
+    get: () => ipcRenderer.invoke(IPC.settings.get),
+    setAutoUpdate: (enabled) => ipcRenderer.invoke(IPC.settings.setAutoUpdate, enabled)
   },
   updates: {
-    check: (): Promise<
-      | { status: 'dev' }
-      | { status: 'available'; version: string }
-      | { status: 'not-available'; version: string }
-      | { status: 'error'; error: string }
-    > => ipcRenderer.invoke('updates:check')
+    check: () => ipcRenderer.invoke(IPC.updates.check)
   },
-  onExternalLinkOpenFailed: (callback: (url: string) => void): (() => void) => {
-    const listener = (_event: unknown, url: string): void => callback(url)
-    ipcRenderer.on('external-link-open-failed', listener)
-    return () => ipcRenderer.removeListener('external-link-open-failed', listener)
+  links: {
+    onOpenFailed: (callback) => {
+      const listener = (_event: IpcRendererEvent, url: string): void => callback(url)
+      ipcRenderer.on(IPC.links.openFailed, listener)
+      return () => {
+        ipcRenderer.removeListener(IPC.links.openFailed, listener)
+      }
+    }
   }
 }
 
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-expect-error fallback for non-isolated context, dev only
-  window.electron = electronAPI
-  // @ts-expect-error fallback for non-isolated context, dev only
-  window.api = api
-}
+contextBridge.exposeInMainWorld('api', api)

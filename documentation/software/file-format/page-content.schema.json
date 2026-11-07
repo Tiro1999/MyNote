@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mynote.app/schema/page-content.schema.json",
+  "title": "MyNote Page Content",
+  "description": "Canvas content of a single chapter note, page, or subpage — stored at '{folder}/page.json'. 'folder' is '{dataRoot}/{notebookId}/{sectionId}/page.json' for a chapter's own note, or '{dataRoot}/{notebookId}/{sectionId}/{...pageIdChain}/page.json' for a page/subpage. The file is created by the first content save, not when the page is created. Describes what MyNote writes. The loader (parsePageContent in application/src/renderer/src/canvas/model.ts) is more lenient: it fills a missing 'pageId' with the id of the opened content and a missing 'elements' with [], keeps unknown fields on the page and on every element, and rejects a text box without finite numbers or an object 'content' as a corrupt file. See documentation/software/file-format/file-format.md.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["pageId", "elements"],
+  "properties": {
+    "pageId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Id of the section (chapter note) or page/subpage this content belongs to. Matches the last id in the folder's path."
+    },
+    "elements": {
+      "type": "array",
+      "description": "Free-canvas elements, each absolutely positioned via x/y/width/height/zIndex. Only 'textbox' elements are drawn; every other element is kept and saved unchanged.",
+      "items": { "$ref": "#/$defs/canvasElement" }
+    }
+  },
+  "$defs": {
+    "canvasElement": {
+      "description": "A text box, or a foreign element of another type. The loader only needs a string 'id' and a string 'type' from an element and checks the geometry of a text box.",
+      "anyOf": [
+        { "$ref": "#/$defs/textBoxElement" },
+        { "$ref": "#/$defs/imageElement" },
+        { "$ref": "#/$defs/fileElement" },
+        { "$ref": "#/$defs/foreignElement" }
+      ]
+    },
+    "textBoxElement": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "type", "x", "y", "width", "height", "zIndex", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "const": "textbox" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 },
+        "zIndex": { "type": "number" },
+        "content": {
+          "$ref": "tiptap-document.schema.json",
+          "description": "TipTap ProseMirror JSON document, see tiptap-document.schema.json."
+        }
+      }
+    },
+    "imageElement": {
+      "description": "Legacy: written by other branches of v0.1.x. MyNote never creates one and never draws it; it is kept in the file. The loader does not check its fields.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "type", "x", "y", "width", "height", "zIndex", "assetPath", "alt"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "const": "image" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 },
+        "zIndex": { "type": "number" },
+        "assetPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path relative to this page's own 'assets/' subfolder."
+        },
+        "alt": { "type": "string" }
+      }
+    },
+    "fileElement": {
+      "description": "Legacy: written by other branches of v0.1.x. MyNote never creates one and never draws it; it is kept in the file. The loader does not check its fields.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "type", "x", "y", "width", "height", "zIndex", "assetPath", "fileName"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "const": "file" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 },
+        "zIndex": { "type": "number" },
+        "assetPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path relative to this page's own 'assets/' subfolder."
+        },
+        "fileName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "foreignElement": {
+      "description": "Any element of another type (ForeignElement in canvas/model.ts): kept with all its fields, never drawn.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "not": { "const": "textbox" } }
+      }
+    }
+  }
+}

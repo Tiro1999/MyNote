@@ -1,5 +1,3 @@
-import type { Entry, EntryType } from './model'
-
 /** Parse RFC-4180 CSV text into a matrix of string cells. */
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = []
@@ -71,53 +69,4 @@ function encodeField(value: string): string {
 
 export function serializeCsv(rows: string[][]): string {
   return rows.map((r) => r.map(encodeField).join(',')).join('\r\n')
-}
-
-export const LEDGER_HEADER = [
-  'id',
-  'pos',
-  'date',
-  'type',
-  'amount',
-  'accountId',
-  'categoryPath',
-  'topic',
-  'tags',
-  'referenceLink'
-]
-
-export function serializeLedgerCsv(entries: Entry[]): string {
-  const rows = [LEDGER_HEADER]
-  for (const e of entries) {
-    rows.push([
-      e.id,
-      String(e.pos),
-      e.date,
-      e.type,
-      e.amount,
-      e.accountId,
-      e.categoryPath,
-      e.topic,
-      e.tags.join(';'),
-      e.referenceLink
-    ])
-  }
-  return serializeCsv(rows)
-}
-
-export function parseLedgerCsv(text: string): Entry[] {
-  const rows = parseCsv(text)
-  if (rows.length <= 1) return []
-  return rows.slice(1).map((cells) => ({
-    id: cells[0] ?? '',
-    pos: Number(cells[1] ?? '0'),
-    date: cells[2] ?? '',
-    type: (cells[3] as EntryType) ?? 'expense',
-    amount: cells[4] ?? '0',
-    accountId: cells[5] ?? '',
-    categoryPath: cells[6] ?? '',
-    topic: cells[7] ?? '',
-    tags: (cells[8] ?? '').length > 0 ? (cells[8] as string).split(';') : [],
-    referenceLink: cells[9] ?? ''
-  }))
 }

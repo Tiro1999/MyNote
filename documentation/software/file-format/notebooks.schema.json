@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mynote.app/schema/notebooks.schema.json",
+  "title": "MyNote Notebooks Manifest",
+  "description": "Root manifest stored at '{dataRoot}/notebooks.json'. Holds the full notebook → chapter → page/subpage hierarchy and metadata only — actual canvas content lives in separate 'page.json' files, see page-content.schema.json. Describes what MyNote writes. The loader (parseNotebooks in application/src/renderer/src/notebook/persistence.ts, types in notebook/model.ts) is more lenient: it fills a missing 'sections', 'pages' or 'children' list with [], keeps unknown fields at every level, and rejects wrong types, invalid ids, repeated ids and the reserved notebook id as a corrupt file. See documentation/software/file-format/file-format.md.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/notebook" },
+  "$defs": {
+    "notebook": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "name", "color", "sections"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/notebookId"
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/hexColor" },
+        "sections": {
+          "type": "array",
+          "description": "The notebook's chapters. The persisted key keeps its v0.1.x spelling; the UI says Chapter.",
+          "items": { "$ref": "#/$defs/section" }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "notebookId", "name", "color", "pages"],
+      "properties": {
+        "id": { "$ref": "#/$defs/folderId" },
+        "notebookId": { "type": "string", "minLength": 1, "description": "Id of the owning notebook. Must match an entry in the top-level array. The folder of a chapter comes from where it sits in the manifest, not from this field." },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/hexColor" },
+        "collapsed": {
+          "type": "boolean",
+          "description": "Sidebar collapse state of this chapter's page tree. Absent is equivalent to false."
+        },
+        "pages": {
+          "type": "array",
+          "description": "Top-level pages of this chapter (not including nested subpages, which live under each page's 'children').",
+          "items": { "$ref": "#/$defs/pageMeta" }
+        }
+      }
+    },
+    "pageMeta": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "sectionId", "title", "createdAt", "updatedAt", "children"],
+      "properties": {
+        "id": { "$ref": "#/$defs/folderId" },
+        "sectionId": { "type": "string", "minLength": 1, "description": "Id of the chapter this page (or subpage) belongs to — the same for every node in a subpage chain." },
+        "title": { "type": "string", "minLength": 1 },
+        "collapsed": {
+          "type": "boolean",
+          "description": "Sidebar collapse state of this page's subpage tree. Absent is equivalent to false."
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "children": {
+          "type": "array",
+          "description": "Nested subpages, recursively of the same shape. MyNote writes an empty array if there are none; the loader also accepts a missing key.",
+          "items": { "$ref": "#/$defs/pageMeta" }
+        }
+      }
+    },
+    "folderId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "Names a folder, so it matches /^[A-Za-z0-9_-]{1,64}$/ (MyNote generates a 21-character nanoid). Chapter ids are unique among all chapters and page ids among all pages and subpages of the file, compared without case because Windows and macOS folder names ignore case. A chapter and a page may share an id."
+    },
+    "notebookId": {
+      "allOf": [{ "$ref": "#/$defs/folderId" }],
+      "not": { "pattern": "^[Ff][Ii][Nn][Aa][Nn][Cc][Ee]$" },
+      "description": "Names the notebook's top-level folder, so it matches /^[A-Za-z0-9_-]{1,64}$/. Unique in notebooks.json when compared without case; 'finance' (in any case) is reserved because the folder finance/ holds the finance data."
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "examples": ["#0078D4", "#E3008C"]
+    }
+  }
+}

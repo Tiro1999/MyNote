@@ -1,0 +1,82 @@
+.tiptap-editor .ProseMirror .table-plus-wrapper {
+  position: relative;
+  margin: 0.6rem 0 1.2rem;
+  /* Gutter for the "+" circles on the top and left boundaries */
+  padding: 1.1rem 0 0 1.1rem;
+}
+
+.tiptap-editor .ProseMirror .tableWrapper {
+  overflow-x: auto;
+}
+
+.tiptap-editor .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.tiptap-editor .ProseMirror td,
+.tiptap-editor .ProseMirror th {
+  border: 1px solid #d1d5db;
+  padding: 0.4rem 0.6rem;
+  vertical-align: top;
+  min-width: 3em;
+}
+
+.tiptap-editor .ProseMirror th {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+}
+
+.dark .tiptap-editor .ProseMirror td,
+.dark .tiptap-editor .ProseMirror th {
+  border-color: #374151;
+}
+
+.dark .tiptap-editor .ProseMirror th {
+  background: #1f2937;
+}
+
+/* "+" circles centred on each row/column boundary; left/top are set inline from measured positions */
+.tiptap-editor .ProseMirror .table-plus-btn {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 9999px;
+  background: #9ca3af;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  /* Off until the table is hovered, so the invisible circles never swallow cell clicks */
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.1s, background 0.1s;
+  z-index: 2;
+}
+
+.tiptap-editor .ProseMirror .table-plus-wrapper:hover .table-plus-btn {
+  opacity: 0.55;
+  pointer-events: auto;
+}
+
+.tiptap-editor .ProseMirror .table-plus-btn:hover {
+  opacity: 1;
+  background: #3b82f6;
+}
+
+.dark .tiptap-editor .ProseMirror .table-plus-btn {
+  background: #4b5563;
+}
+
+.dark .tiptap-editor .ProseMirror .table-plus-btn:hover {
+  background: #3b82f6;
+}

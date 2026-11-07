@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Tailwind v4 borders default to currentcolor; keep the v3 gray-200 look */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* Tailwind v4 preflight dropped these v3 defaults */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #ffffff;
+  color: #111827;
+}
+
+.dark body {
+  background: #030712;
+  color: #f3f4f6;
+}

@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mynote.app/schema/tiptap-document.schema.json",
+  "title": "MyNote Rich-Text Document (TipTap / ProseMirror JSON)",
+  "description": "Schema for the value stored in a text box element's 'content' field — a ProseMirror document as produced by editor.getJSON(). The editor extensions are built by buildExtensions in application/src/renderer/src/editor/extensions.ts: TipTap StarterKit (nodes doc, paragraph, text, heading, blockquote, bulletList, orderedList, listItem, codeBlock, horizontalRule, hardBreak; marks bold, italic, strike, code, underline, link), TextAlign on heading and paragraph, TableKit (tableRow, tableHeader, tableCell) with the table node of TableWithControls, the core blocks in editor/blocks/ (callout, tocBlock, pageHierarchyBlock), the finance blocks in finance/nodes.ts (financeLedger, financeStats) and the load-only templateLink in editor/blocks/legacy.ts. tocBlock and pageHierarchyBlock are persisted only as their type and attrs — the visible list is computed live at render time. financeLedger and financeStats hold only the binding to a ledger and the display settings; the entries live in finance/ledgers/. With MYNOTE_FINANCE=off the two finance nodes stay registered and keep their attrs unchanged. TableWithControls only customizes the editor view of the table node; the persisted table/tableRow/tableHeader/tableCell JSON is the stock @tiptap/extension-table shape. Describes what the editor writes. A node or mark type that no extension registers is not rejected here, but the text box opens read-only and keeps its stored content (TipTap enableContentCheck, useNoteEditor.ts). MAINTENANCE: update the matching if/then refinements below whenever a block or an extension is added or changed. See documentation/software/file-format/file-format.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "content"],
+  "properties": {
+    "type": { "const": "doc" },
+    "content": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "attrs": { "type": "object" },
+        "content": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "text": { "type": "string", "minLength": 1 },
+        "marks": { "type": "array", "items": { "$ref": "#/$defs/mark" } }
+      },
+      "allOf": [
+        {
+          "$comment": "text: leaf inline node, requires non-empty 'text', no content.",
+          "if": { "properties": { "type": { "const": "text" } }, "required": ["type"] },
+          "then": { "required": ["text"], "not": { "required": ["content"] } }
+        },
+        {
+          "$comment": "heading (StarterKit): level 1-6 (the toolbar offers 1-3). 'id' is a legacy attribute that v0.1.x wrote; the node does not have it, so ProseMirror drops it on load.",
+          "if": { "properties": { "type": { "const": "heading" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["level"],
+                "properties": {
+                  "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+                  "id": { "type": ["string", "null"], "description": "Legacy v0.1.x attribute, dropped on load." },
+                  "textAlign": { "$ref": "#/$defs/textAlign" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "paragraph: TextAlign extension adds an optional 'textAlign' attr.",
+          "if": { "properties": { "type": { "const": "paragraph" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "attrs": { "type": "object", "properties": { "textAlign": { "$ref": "#/$defs/textAlign" } } }
+            }
+          }
+        },
+        {
+          "$comment": "codeBlock: StarterKit's default code block, optional language attr.",
+          "if": { "properties": { "type": { "const": "codeBlock" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "attrs": { "type": "object", "properties": { "language": { "type": ["string", "null"] } } }
+            }
+          }
+        },
+        {
+          "$comment": "horizontalRule / hardBreak: leaf nodes, no content or text.",
+          "if": {
+            "properties": { "type": { "enum": ["horizontalRule", "hardBreak"] } },
+            "required": ["type"]
+          },
+          "then": { "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] } }
+        },
+        {
+          "$comment": "callout (editor/blocks/callout.ts): variant enum, requires block+ content (never empty — the slash item always seeds one paragraph). parseCalloutVariant shows any other stored variant as info and leaves the stored value unchanged.",
+          "if": { "properties": { "type": { "const": "callout" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs", "content"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["variant"],
+                "properties": { "variant": { "type": "string", "enum": ["info", "note", "warning", "error"], "default": "info" } }
+              },
+              "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } }
+            }
+          }
+        },
+        {
+          "$comment": "templateLink (editor/blocks/legacy.ts): LEGACY, load-only inline atom that v0.1.x wrote. It stays registered so a page that holds it still loads; MyNote never inserts one. A link of kind 'page' opens that page, a link of kind 'heading' does nothing. No content/text, just attrs.",
+          "if": { "properties": { "type": { "const": "templateLink" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["kind", "targetId", "label"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["heading", "page"], "default": "page" },
+                  "targetId": { "type": ["string", "null"], "default": null },
+                  "label": { "type": "string", "default": "" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "tocBlock (editor/blocks/toc.ts): live table-of-contents block, block-level atom — no attrs, content or text; its list is computed live from the headings of its own text box at render time, never persisted.",
+          "if": { "properties": { "type": { "const": "tocBlock" } }, "required": ["type"] },
+          "then": {
+            "not": {
+              "anyOf": [{ "required": ["attrs"] }, { "required": ["content"] }, { "required": ["text"] }]
+            }
+          }
+        },
+        {
+          "$comment": "pageHierarchyBlock (editor/blocks/pageHierarchy.ts): live page/subpage list, block-level atom — only remembers the anchor (kind + targetId) it was inserted for; the list itself is computed live from the notebook store at render time, never persisted.",
+          "if": { "properties": { "type": { "const": "pageHierarchyBlock" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["kind", "targetId"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["section", "page"], "default": "section" },
+                  "targetId": { "type": ["string", "null"], "default": null }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "financeLedger (finance/nodes.ts, FinanceLedgerNode): block-level atom bound to one ledger. 'ledgerId' names finance/ledgers/<ledgerId>.csv and .meta.json, so a usable id matches /^[A-Za-z0-9_-]{1,64}$/; an empty or invalid id has no file and the block can only be removed. A pasted or hand-edited page may hold any value, which the block reads as '' when it is no string.",
+          "if": { "properties": { "type": { "const": "financeLedger" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["ledgerId"],
+                "properties": {
+                  "ledgerId": { "type": "string", "default": "" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "financeStats (finance/nodes.ts, FinanceStatsNode): block-level atom that evaluates one ledger. parseStatsSettings gives every attr the type the block relies on (a value of the wrong type reads as its default). 'from' and 'to' are ISO dates YYYY-MM-DD and apply to the period 'Custom range'; an empty side stays open. 'categoryFocus' is a category path such as Food/Groceries, '' = all main categories. 'tagFilter' has no UI but is honoured when present.",
+          "if": { "properties": { "type": { "const": "financeStats" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "not": { "anyOf": [{ "required": ["content"] }, { "required": ["text"] }] },
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["ledgerId", "mode", "from", "to", "categoryFocus", "tagFilter"],
+                "properties": {
+                  "ledgerId": { "type": "string", "default": "" },
+                  "mode": { "type": "string", "enum": ["overall", "category"], "default": "overall" },
+                  "from": { "type": "string", "default": "" },
+                  "to": { "type": "string", "default": "" },
+                  "categoryFocus": { "type": "string", "default": "" },
+                  "tagFilter": { "type": "array", "items": { "type": "string" }, "default": [] }
+                }
+              }
+            }
+          }
+        },
+        {
+          "$comment": "table (editor/blocks/table/table.ts, wrapping @tiptap/extension-table for the '+' controls and the context menu only — persisted shape is stock): one or more tableRow children.",
+          "if": { "properties": { "type": { "const": "table" } }, "required": ["type"] },
+          "then": {
+            "required": ["content"],
+            "properties": { "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } } }
+          }
+        },
+        {
+          "$comment": "tableRow (TableKit): one or more tableCell/tableHeader children.",
+          "if": { "properties": { "type": { "const": "tableRow" } }, "required": ["type"] },
+          "then": {
+            "required": ["content"],
+            "properties": { "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } } }
+          }
+        },
+        {
+          "$comment": "tableCell / tableHeader (TableKit): block+ content, colspan/rowspan default 1, optional colwidth array (column resizing is off, but the attribute stays valid on documents from another client).",
+          "if": {
+            "properties": { "type": { "enum": ["tableCell", "tableHeader"] } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["content"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "properties": {
+                  "colspan": { "type": "integer", "minimum": 1 },
+                  "rowspan": { "type": "integer", "minimum": 1 },
+                  "colwidth": { "type": ["array", "null"], "items": { "type": ["integer", "null"] } },
+                  "align": { "type": ["string", "null"], "description": "Cell text alignment of @tiptap/extension-table; null when unset." }
+                }
+              },
+              "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } }
+            }
+          }
+        }
+      ]
+    },
+    "mark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["bold", "italic", "strike", "code", "underline", "link"] },
+        "attrs": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "$comment": "link mark (StarterKit's Link with openOnClick off): the app itself sets only href through the link popover (http:, https: or mailto:). target, rel, class and title are the extension's own attributes.",
+          "if": { "properties": { "type": { "const": "link" } }, "required": ["type"] },
+          "then": {
+            "required": ["attrs"],
+            "properties": {
+              "attrs": {
+                "type": "object",
+                "required": ["href"],
+                "properties": {
+                  "href": { "type": "string" },
+                  "target": { "type": ["string", "null"] },
+                  "rel": { "type": ["string", "null"] },
+                  "class": { "type": ["string", "null"] },
+                  "title": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "textAlign": {
+      "type": ["string", "null"],
+      "enum": ["left", "center", "right", "justify", null]
+    }
+  }
+}
