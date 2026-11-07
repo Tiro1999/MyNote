@@ -6,14 +6,28 @@ How MyNote is built, checked and shipped: one toolchain pinned by `.nvmrc`, a CI
 
 | What | Where | Rule |
 |---|---|---|
-| Node major | `.nvmrc` (`26`) | Read by `actions/setup-node` (`node-version-file`; `check-latest: true` takes the newest 26.x patch) and by nvm. The devcontainer does not read it |
-| Devcontainer | `ARG NODE_VERSION` in `.devcontainer/Dockerfile` | Hard-coded copy of the major, kept in sync with `.nvmrc` by hand (neither the Dockerfile nor `devcontainer.json` reads the file); the official `node` image of that major (Debian bookworm), user `node`, Electron's native libraries, `npm ci` after creation |
-| npm | bundled with that Node | No separate pin; `engines` in `application/package.json` require Node 26 or newer and npm 11 or newer |
-| Electron | `devDependencies.electron` | Brings its own Chromium and Node; `process.versions` shows them at run time |
+| Node (exact version) | `.nvmrc` (`26.13.0`) | Read by `actions/setup-node` (`node-version-file`) and by nvm. `check-latest: true` stays set; with an exact version it does not change which release is installed. The devcontainer does not read the file |
+| Devcontainer | `ARG NODE_VERSION` in `.devcontainer/Dockerfile` | Hard-coded copy of the exact version, kept equal to `.nvmrc` by hand (neither the Dockerfile nor `devcontainer.json` reads the file); the official `node` image of that version (Debian bookworm), user `node`, Electron's native libraries, `npm ci` after creation |
+| Node floor | `engines.node` in `application/package.json` (`>=26.12.1`), repeated in the root entry of `package-lock.json` | npm warns with `EBADENGINE` when the local Node is older; raised when a security fix sets a new floor, see [Why the pin is exact](#why-the-pin-is-exact) |
+| npm | bundled with that Node | No separate pin; `engines.npm` requires npm 11 or newer |
+| Electron | `devDependencies.electron` | Brings its own Chromium and Node; `process.versions` shows them at run time, see [Electron's embedded Node](#electrons-embedded-node) |
 
 - There is no Node on the host: run every npm command in the devcontainer (the tasks in `.vscode/tasks.json` run `npm` commands in `application/`).
-- To change the Node major, edit `.nvmrc` and `ARG NODE_VERSION`, run `npm ci` in the container and commit `application/package-lock.json` if it changed.
+- To change the Node version, set `.nvmrc` and `ARG NODE_VERSION` to the same exact version, raise `engines.node` if a security fix sets a new floor, rebuild the devcontainer, run `npm ci` in it and commit `application/package-lock.json` if it changed.
 - Both workflows log the exact `node`, `npm` and V8 versions. CI only prints them; the release writes one `runtime-versions-*.txt` per runner and attaches them to the draft release.
+
+### Why the pin is exact
+
+A pin to the major (`26`) lets stale Docker layers and runner caches keep an old, vulnerable patch release; the exact version removes that. The floor `>=26.12.1` comes from CVE-2026-111497:
+
+- Node releases before 26.12.1 (21.10.2026) bundle a Brotli decoder with an out-of-bounds write that can lead to remote code execution. The same release fixes several TLS and DNS CVEs; 26.13.0 (28.10.2026) contains everything from 26.12.1. Source: <https://nodejs.org/en/blog/vulnerability/october-2026-security-releases>.
+- Node carries the fix as a cherry-pick, so `process.versions.brotli` says nothing. `node -p "require('zlib').constants.BROTLI_DECODER_ERROR_FORMAT_BLOCK_SWITCH"` prints `-17` in a fixed Node and `undefined` in a vulnerable one.
+
+### Electron's embedded Node
+
+The Node pin covers the toolchain, not the packaged app: the app runs on the Node inside Electron. `electron@42.11.18` (the version in the lockfile) embeds Node 24.19.0, which predates the fix (24.22.1); Electron 43.8.6, 44.10.1 and 45.2.1 embed Node 24.22.1. Source: <https://artifacts.electronjs.org/headers/dist/index.json>.
+
+Nothing in `application/src`, `electron-updater` or `builder-util-runtime` calls the Brotli decoder; the xlsx reader uses only `inflateRawSync`.
 
 ## CI gates
 
