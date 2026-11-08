@@ -41,7 +41,7 @@ Normal `npm install` and `npm ci` keep these entries. They are typically lost wh
 
 [`nightly-sbom-scan.yml`](../../../.github/workflows/nightly-sbom-scan.yml) runs every night at 03:17 UTC (and on demand) against the SBOM of the latest release tag. The tag is the highest `vMajor.Minor.Patch` by semver, whatever the draft status of its GitHub Release. Without a tag the run only prints a notice.
 
-The last step, "Fail run when vulnerabilities were found", turns the run red when the scanners report any finding; archiving the reports can never do that (see below). A failed tool install, SBOM check or count parsing fails the run as well. Findings go to the job summary and to a GitHub issue labelled `sbom-scan`, one per release tag; a later run with findings updates that issue instead of opening a second one.
+The last step, "Fail run when vulnerabilities were found", turns the run red when the scanners report any finding; archiving the reports can never do that (see below). Each scanner install is tried up to three times, because GitHub now and then answers with a 5xx error; an install that still fails, a failed SBOM check or failed count parsing fails the run as well. Findings go to the job summary and to a GitHub issue labelled `sbom-scan`, one per release tag; a later run with findings updates that issue instead of opening a second one.
 
 ### Obtaining the SBOM
 

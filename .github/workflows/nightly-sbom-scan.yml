@@ -60,25 +60,41 @@ jobs:
           fi
           jq -e '.bomFormat == "CycloneDX"' sbom.cdx.json > /dev/null
 
-      - name: Install Grype
+      # GitHub answers 5xx now and then, so each install is retried; see documentation/software/build/sbom.md
+      - name: Install scanners
         if: steps.tag.outputs.found == 'true'
         run: |
-          curl -sSfL https://get.anchore.io/grype | sh -s -- -b "$HOME/.local/bin"
+          set -o pipefail
+          mkdir -p "$HOME/.local/bin"
+
+          retry() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              echo "::warning::$1 failed (attempt $attempt of 3)"
+              if [ "$attempt" -lt 3 ]; then sleep $((attempt * 20)); fi
+            done
+            return 1
+          }
+
+          install_grype() {
+            curl -sSfL https://get.anchore.io/grype | sh -s -- -b "$HOME/.local/bin"
+          }
+          install_osv() {
+            VERSION=$(curl -sSf https://api.github.com/repos/google/osv-scanner/releases/latest | jq -er .tag_name) &&
+              curl -sSfL -o "$HOME/.local/bin/osv-scanner" \
+                "https://github.com/google/osv-scanner/releases/download/${VERSION}/osv-scanner_linux_amd64" &&
+              chmod +x "$HOME/.local/bin/osv-scanner"
+          }
+          install_trivy() {
+            curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$HOME/.local/bin"
+          }
+
+          retry install_grype
+          retry install_osv
+          retry install_trivy
+
           "$HOME/.local/bin/grype" version
-
-      - name: Install OSV-Scanner
-        if: steps.tag.outputs.found == 'true'
-        run: |
-          VERSION=$(curl -sSf https://api.github.com/repos/google/osv-scanner/releases/latest | jq -r .tag_name)
-          curl -sSfL -o "$HOME/.local/bin/osv-scanner" \
-            "https://github.com/google/osv-scanner/releases/download/${VERSION}/osv-scanner_linux_amd64"
-          chmod +x "$HOME/.local/bin/osv-scanner"
           "$HOME/.local/bin/osv-scanner" --version
-
-      - name: Install Trivy
-        if: steps.tag.outputs.found == 'true'
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$HOME/.local/bin"
           "$HOME/.local/bin/trivy" version
 
       # Four scanners with different advisory feeds; see documentation/software/build/sbom.md
