@@ -51,4 +51,4 @@ Bugs and ideas are welcome as [issues](https://github.com/Tiro1999/MyNote/issues
 
 ## License
 
-Not yet decided - all rights reserved.
+MyNote is released under the [MIT License](LICENSE).
