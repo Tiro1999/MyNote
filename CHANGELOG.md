@@ -4,6 +4,13 @@
 
 ---
 
+v0.2.0
+
+- fix dependency vulnerabilities of packages
+- structural refactoring for optimized architecture
+
+---
+
 v0.1.12
 
 - fix dependency vulnerabilities of packages
