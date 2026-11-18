@@ -17,7 +17,7 @@ cd application
 npm sbom --sbom-format cyclonedx --package-lock-only > sbom-local.cdx.json
 ```
 
-This needs the npm that comes with the pinned Node; `engines` in `application/package.json` require npm 11 or newer (see [Build and release](build-and-release.md)).
+This needs the pinned npm (`devEngines` in `application/package.json`, see [Build and release](build-and-release.md)); any other npm stops with `EBADDEVENGINES`.
 
 ## CI check
 
@@ -45,7 +45,7 @@ The last step, "Fail run when vulnerabilities were found", turns the run red whe
 
 ### Obtaining the SBOM
 
-The scan takes the SBOM asset of the release first. If that download fails, for example while the release is still a draft, the step regenerates the SBOM from the tag's `package-lock.json`; `npm sbom` is deterministic from the lockfile, so the result describes the same dependency set.
+The scan takes the SBOM asset of the release first. If that download fails, for example while the release is still a draft, the step regenerates the SBOM from the tag's `package-lock.json`; `npm sbom` is deterministic from the lockfile, so the result describes the same dependency set. Before that the job installs the tag's own npm pin with the `pin-npm` action; tags from before the pin have neither the action nor `devEngines` and keep the npm bundled with Node.
 
 ### Four scanners
 

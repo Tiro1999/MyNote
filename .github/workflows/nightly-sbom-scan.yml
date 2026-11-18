@@ -42,6 +42,10 @@ jobs:
           node-version-file: '.nvmrc'
           check-latest: true
 
+      # The tag's own npm pin, else npm sbom and npm audit stop with EBADDEVENGINES; older tags have neither
+      - uses: ./.github/actions/pin-npm
+        if: steps.tag.outputs.found == 'true' && hashFiles('.github/actions/pin-npm/action.yml') != ''
+
       # Release asset first, else regenerated from the tag's lockfile (same result); see documentation/software/build/sbom.md
       - name: Obtain SBOM for ${{ steps.tag.outputs.tag }}
         if: steps.tag.outputs.found == 'true'

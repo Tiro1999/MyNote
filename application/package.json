@@ -11,6 +11,13 @@
     "node": ">=26.12.1",
     "npm": ">=11.0.0"
   },
+  "devEngines": {
+    "packageManager": {
+      "name": "npm",
+      "version": "12.2.3",
+      "onFail": "error"
+    }
+  },
   "scripts": {
     "ensure:electron": "node -e \"require('electron')\"",
     "postinstall": "npm run ensure:electron",

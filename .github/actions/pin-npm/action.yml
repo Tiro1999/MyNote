@@ -1,0 +1,16 @@
+name: Pin npm
+description: Installs the npm that devEngines.packageManager in application/package.json pins; see documentation/software/build/build-and-release.md
+
+runs:
+  using: composite
+  steps:
+    - name: Install pinned npm
+      shell: bash
+      run: |
+        VERSION=$(node -p "require('./application/package.json').devEngines?.packageManager?.version ?? ''")
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::devEngines.packageManager.version in application/package.json must be an exact version, got '$VERSION'"
+          exit 1
+        fi
+        npm install -g "npm@$VERSION"
+        echo "npm=$(npm --version)"

@@ -1,19 +1,20 @@
 # Build and release
 
-How MyNote is built, checked and shipped: one toolchain pinned by `.nvmrc`, a CI gate on every change and a tag-driven release that ends in a draft GitHub Release.
+How MyNote is built, checked and shipped: one toolchain pinned by `.nvmrc` and `devEngines`, a CI gate on every change and a tag-driven release that ends in a draft GitHub Release.
 
-## Environment and Node pin
+## Environment, Node and npm pin
 
 | What | Where | Rule |
 |---|---|---|
 | Node (exact version) | `.nvmrc` (`26.13.0`) | Read by `actions/setup-node` (`node-version-file`) and by nvm. `check-latest: true` stays set; with an exact version it does not change which release is installed. The devcontainer does not read the file |
-| Devcontainer | `ARG NODE_VERSION` in `.devcontainer/Dockerfile` | Hard-coded copy of the exact version, kept equal to `.nvmrc` by hand (neither the Dockerfile nor `devcontainer.json` reads the file); the official `node` image of that version (Debian bookworm), user `node`, Electron's native libraries, `npm ci` after creation |
+| Devcontainer | `ARG NODE_VERSION` and `ARG NPM_VERSION` in `.devcontainer/Dockerfile` | Hard-coded copies of the exact versions, kept equal to `.nvmrc` and `devEngines` by hand (neither the Dockerfile nor `devcontainer.json` reads those files); the official `node` image of that version (Debian bookworm) with the pinned npm, user `node`, Electron's native libraries, `npm ci` after creation |
 | Node floor | `engines.node` in `application/package.json` (`>=26.12.1`), repeated in the root entry of `package-lock.json` | npm warns with `EBADENGINE` when the local Node is older; raised when a security fix sets a new floor, see [Why the pin is exact](#why-the-pin-is-exact) |
-| npm | bundled with that Node | No separate pin; `engines.npm` requires npm 11 or newer |
+| npm (exact version) | `devEngines.packageManager` in `application/package.json` (`12.2.3`) | Replaces the npm bundled with Node. With `onFail: error` any other npm stops `install`, `ci`, `run`, `version`, `sbom` and `audit` with `EBADDEVENGINES`. Every workflow job installs it right after `setup-node` with the local action `.github/actions/pin-npm`. `engines.npm` keeps its floor (`>=11.0.0`) |
 | Electron | `devDependencies.electron` | Brings its own Chromium and Node; `process.versions` shows them at run time, see [Electron's embedded Node](#electrons-embedded-node) |
 
 - There is no Node on the host: run every npm command in the devcontainer (the tasks in `.vscode/tasks.json` run `npm` commands in `application/`).
 - To change the Node version, set `.nvmrc` and `ARG NODE_VERSION` to the same exact version, raise `engines.node` if a security fix sets a new floor, rebuild the devcontainer, run `npm ci` in it and commit `application/package-lock.json` if it changed.
+- To change the npm version, for example when npm reports a new one after a command, set `devEngines.packageManager.version` and `ARG NPM_VERSION` to the same exact version, rebuild the devcontainer, run `npm ci` in it and commit `application/package-lock.json` if it changed. Until the rebuild, npm commands in the container stop with `EBADDEVENGINES`.
 - Both workflows log the exact `node`, `npm` and V8 versions. CI only prints them; the release writes one `runtime-versions-*.txt` per runner and attaches them to the draft release.
 
 ### Why the pin is exact
@@ -31,7 +32,7 @@ Nothing in `application/src`, `electron-updater` or `builder-util-runtime` calls
 
 ## CI gates
 
-`ci.yml` runs on pushes and pull requests to `main` that touch `application/**`, `.nvmrc` or the workflow, with read-only permissions. In `application/` it runs `npm ci`, the SBOM check (see [SBOM](sbom.md)), `npm run lint` (fails on warnings), `npm run typecheck`, `npm test` and `npm run build`, then prints the runtime versions.
+`ci.yml` runs on pushes and pull requests to `main` that touch `application/**`, `.nvmrc`, the `pin-npm` action or the workflow, with read-only permissions. It installs the pinned npm, then runs in `application/` `npm ci`, the SBOM check (see [SBOM](sbom.md)), `npm run lint` (fails on warnings), `npm run typecheck`, `npm test` and `npm run build`, then prints the runtime versions.
 
 CI is a pure quality gate: it proves that the code lints, type-checks, passes its tests and builds. It deliberately uploads no artifact; installable binaries come only from the release workflow on a version tag.
 
@@ -43,8 +44,8 @@ A version tag builds the installers on three runners and the SBOM beside them; t
 
 | Job | Runs on | Does | Hands over |
 |---|---|---|---|
-| `build` (matrix, `fail-fast: false`) | Windows, macOS, Linux runners | `npm ci`, record runtime versions, stamp the version, `npm run dist` | artifacts `installer-*` and `runtime-versions-*`, one per runner |
-| `sbom` | Linux runner | stamp the version, generate and check the CycloneDX SBOM | artifact `sbom` |
+| `build` (matrix, `fail-fast: false`) | Windows, macOS, Linux runners | pin npm, `npm ci`, record runtime versions, stamp the version, `npm run dist` | artifacts `installer-*` and `runtime-versions-*`, one per runner |
+| `sbom` | Linux runner | pin npm, stamp the version, generate and check the CycloneDX SBOM | artifact `sbom` |
 | `release` (`needs: build, sbom`) | Linux runner | download all artifacts, create the draft release named after the tag, with generated notes, delete the artifacts | the draft GitHub Release |
 
 - The trigger is a tag `vMajor.Minor.Patch`. `npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version` stamps the tag's number into `package.json` before the build, so every binary and the SBOM carry it.
